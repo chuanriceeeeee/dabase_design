@@ -14,7 +14,7 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- -----------------------------------------------------
 -- Schema mydb
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8mb3 ;
+CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8mb4 ;
 USE `mydb` ;
 
 -- -----------------------------------------------------
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`class` (
     FOREIGN KEY (`dept_id`)
     REFERENCES `mydb`.`department` (`dept_id`))
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8mb3;
+DEFAULT CHARACTER SET = utf8mb4;
 
 
 -- -----------------------------------------------------
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`course` (
     FOREIGN KEY (`teacher_id`)
     REFERENCES `mydb`.`teacher` (`teacher_id`))
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8mb3;
+DEFAULT CHARACTER SET = utf8mb4;
 
 
 -- -----------------------------------------------------
@@ -59,29 +59,29 @@ CREATE TABLE IF NOT EXISTS `mydb`.`department` (
   `name` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`dept_id`))
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8mb3;
+DEFAULT CHARACTER SET = utf8mb4;
 
 
 -- -----------------------------------------------------
 -- Table `mydb`.`enrollment`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`enrollment` (
-  `enrollment_id` VARCHAR(45) NOT NULL,
+  `course_id` VARCHAR(45) NOT NULL,
   `student_id` VARCHAR(45) NOT NULL,
-  `score` FLOAT NOT NULL,
+  `score` FLOAT,
   `status` VARCHAR(45) NOT NULL,
-  PRIMARY KEY (`enrollment_id`, `student_id`),
+  PRIMARY KEY (`course_id`, `student_id`),
   INDEX `student_id_idx` (`student_id` ASC) VISIBLE,
   CONSTRAINT `student_id_enrollment`
     FOREIGN KEY (`student_id`)
     REFERENCES `mydb`.`student` (`student_id`),
-  CONSTRAINT `enrollmentid`
-    FOREIGN KEY (`enrollment_id`)
+  CONSTRAINT `course_id_enrollment`
+    FOREIGN KEY (`course_id`)
     REFERENCES `mydb`.`course` (`course_id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8mb3;
+DEFAULT CHARACTER SET = utf8mb4;
 
 
 -- -----------------------------------------------------
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`student` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8mb3;
+DEFAULT CHARACTER SET = utf8mb4;
 
 
 -- -----------------------------------------------------
@@ -117,15 +117,200 @@ CREATE TABLE IF NOT EXISTS `mydb`.`teacher` (
   `name` VARCHAR(45) NOT NULL,
   `password` VARCHAR(45) NOT NULL,
   `dept_id` VARCHAR(45) NOT NULL,
+  -- 12-29新增，通过role_type检验角色
+  
+  `role_type` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`teacher_id`),
   INDEX `dept_id_idx` (`dept_id` ASC) VISIBLE,
   CONSTRAINT `dept_id_teacher`
     FOREIGN KEY (`dept_id`)
     REFERENCES `mydb`.`department` (`dept_id`))
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8mb3;
-
+DEFAULT CHARACTER SET = utf8mb4;
+-- 外键约束role_type
+ALTER TABLE `mydb`.`teacher` 
+MODIFY COLUMN `role_type` VARCHAR(45) NOT NULL DEFAULT 'teacher' 
+CHECK (role_type IN ('teacher', 'admin', 'counselor')); -- 限制仅允许三种角色
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+
+-- 1.存储过程校验：检查学生选课是否可选，包括查重，课容量，执行选课
+DROP PROCEDURE IF EXISTS `sp_student_enroll`;
+DELIMITER //
+CREATE PROCEDURE sp_student_enroll(
+    IN p_student_id VARCHAR(45),  -- 匹配 student.student_id 类型
+    IN p_course_id VARCHAR(45),  -- 修正为 VARCHAR，匹配 course.course_id
+    OUT p_result VARCHAR(50)
+)
+BEGIN
+    DECLARE v_count INT DEFAULT 0;
+    DECLARE v_capacity INT DEFAULT 0;
+    DECLARE v_current INT DEFAULT 0;
+    
+    START TRANSACTION;
+    
+    -- 1. 查重（修复字段匹配）
+    SELECT COUNT(*) INTO v_count FROM enrollment 
+    WHERE student_id = p_student_id AND course_id = p_course_id;
+    
+    IF v_count > 0 THEN
+        SET p_result = 'Already Enrolled';
+        ROLLBACK;
+    ELSE
+        -- 2. 查课程容量（处理课程不存在的情况）
+        SELECT capacity INTO v_capacity FROM course WHERE course_id = p_course_id;
+        IF v_capacity IS NULL THEN
+            SET p_result = 'Course Not Exist';
+            ROLLBACK;
+        ELSE
+            -- 3. 查当前选课人数（处理空值）
+            SELECT COUNT(*) INTO v_current FROM enrollment WHERE course_id = p_course_id;
+            
+            IF v_current < v_capacity THEN
+                -- 4. 执行选课（补充 status 字段，匹配表结构）
+                INSERT INTO enrollment (student_id, course_id, status) 
+                VALUES (p_student_id, p_course_id, 'enrolled');
+                SET p_result = 'Success';
+                COMMIT;
+            ELSE
+                SET p_result = 'Course Full';
+                ROLLBACK;
+            END IF;
+        END IF;
+    END IF;
+END //
+DELIMITER ;
+
+-- 2.trigger
+DELIMITER ;
+-- trigger1：删除课程
+DROP TRIGGER IF EXISTS `trg_before_student_delete_course`;
+
+DELIMITER //
+CREATE TRIGGER `trg_before_student_delete_course`
+BEFORE DELETE ON enrollment
+FOR EACH ROW
+BEGIN
+    -- 校验：若该选课记录已录入成绩（score≠0 视为已录入）
+    IF OLD.score IS NOT NULL THEN
+        -- 抛出异常，阻止删除操作
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = '禁止删除：该课程已录入成绩，无法退课！';
+    END IF;
+END //
+DELIMITER ;
+
+
+-- trigger2：学生数据信息保护
+-- 防止误删有选课记录的学生
+DROP TRIGGER IF EXISTS `trg_prevent_student_delete`;
+
+DELIMITER //
+CREATE TRIGGER trg_prevent_student_delete
+BEFORE DELETE ON student
+FOR EACH ROW
+BEGIN
+    DECLARE v_cnt INT;
+    -- 检查该学生是否有选课记录
+    SELECT COUNT(*) INTO v_cnt FROM enrollment WHERE student_id = OLD.student_id;
+    
+    IF v_cnt > 0 THEN
+        -- 如果有记录，抛出异常阻止删除
+        SIGNAL SQLSTATE '45000' -- 45表示自定义错误
+        SET MESSAGE_TEXT = '禁止删除：该学生仍有选课或成绩记录，请先清除记录。';
+    END IF;
+END //
+DELIMITER ;
+
+-- trigger4：
+
+-- 3. 视图
+-- 学生成绩单详单
+-- 用于后端接口: /api/counselor/analyze_student
+DROP VIEW IF EXISTS `v_student_grades`;
+
+CREATE VIEW `v_student_grades` AS
+SELECT 
+    s.student_id,
+    s.name AS student_name,
+    c.name AS course_name,
+    c.credits,
+   -- semester表已删除 c.semester,
+    t.name AS teacher_name, -- 直接从 Teacher 表获取名字
+    e.score
+FROM enrollment e
+JOIN student s ON e.student_id = s.student_id
+JOIN course c ON e.course_id = c.course_id
+JOIN teacher t ON c.teacher_id = t.teacher_id;
+
+-- 3.创建角色分配权限
+USE mydb; -- 确保应用数据库正确
+ 
+-- 创建学生角色：对应学生业务板块
+
+CREATE ROLE IF NOT EXISTS 'role_student'@'%';
+
+-- a. 查看可选课程（仅读 course 表）
+GRANT SELECT ON mydb.course TO 'role_student'@'%';
+
+-- b. 选课（INSERT）、退课（DELETE）+ 查看已选记录（SELECT）→ enrollment 表
+GRANT INSERT, DELETE, SELECT ON mydb.enrollment TO 'role_student'@'%';
+
+-- c. 查看已选课程及成绩（通过视图 v_student_grades，避免直接操作多表）
+GRANT SELECT ON mydb.v_student_grades TO 'role_student'@'%';
+
+-- d. 修改个人信息（仅允许改 password/email，禁止修改 student_id/name 等核心字段）
+GRANT UPDATE (password, email) ON mydb.student TO 'role_student'@'%';
+
+-- e. 调用选课存储过程（sp_student_enroll：含查重/容量校验，符合业务逻辑）
+GRANT EXECUTE ON PROCEDURE mydb.sp_student_enroll TO 'role_student'@'%';
+
+-- 创建教师角色：对应教师业务板块
+CREATE ROLE IF NOT EXISTS 'role_teacher'@'%';
+-- a. 查看教授课程（仅读 course 表，后端通过 teacher_id 过滤自己的课程）
+GRANT SELECT ON mydb.course TO 'role_teacher'@'%';
+
+-- b. 查看选课学生（仅读学生姓名/ID + 选课记录，避免泄露学生隐私）
+GRANT SELECT (student_id, name) ON mydb.student TO 'role_teacher'@'%';
+GRANT SELECT ON mydb.enrollment TO 'role_teacher'@'%';
+
+-- c. 录入（INSERT）、修改（UPDATE）成绩（仅允许改 score 字段，禁止改 status 等）
+GRANT INSERT, UPDATE (score) ON mydb.enrollment TO 'role_teacher'@'%';
+
+-- d. 课程统计分析（通过视图 v_student_grades 快速获取成绩/课程关联数据）
+GRANT SELECT ON mydb.v_student_grades TO 'role_teacher'@'%';
+-- 创建管理员角色：对应管理员业务板块
+CREATE ROLE IF NOT EXISTS 'role_admin'@'%';
+-- a. 管理专业（department）和班级（class）：增删改查
+GRANT INSERT, UPDATE, DELETE, SELECT ON mydb.department TO 'role_admin'@'%';
+GRANT INSERT, UPDATE, DELETE, SELECT ON mydb.class TO 'role_admin'@'%';
+
+-- b. 管理学生和课程数据：增删改查
+GRANT INSERT, UPDATE, DELETE, SELECT ON mydb.student TO 'role_admin'@'%';
+GRANT INSERT, UPDATE, DELETE, SELECT ON mydb.course TO 'role_admin'@'%';
+
+-- c. 管理选课记录（enrollment）+ 生成报表（视图 v_student_grades）
+GRANT INSERT, UPDATE, DELETE, SELECT ON mydb.enrollment TO 'role_admin'@'%';
+GRANT SELECT ON mydb.v_student_grades TO 'role_admin'@'%';
+
+-- d. 维护选课逻辑（调用存储过程 sp_student_enroll，如需批量处理）
+GRANT EXECUTE ON PROCEDURE mydb.sp_student_enroll TO 'role_admin'@'%';
+
+-- 创建辅导员角色：对应辅导员业务板块
+CREATE ROLE IF NOT EXISTS 'role_counselor'@'%';
+-- a. 查看学生基本信息（仅读 student 表，不含修改权限）
+GRANT SELECT ON mydb.student TO 'role_counselor'@'%';
+
+-- b. 查看学生选课及成绩（enrollment 表 + 视图 v_student_grades）
+GRANT SELECT ON mydb.enrollment TO 'role_counselor'@'%';
+GRANT SELECT ON mydb.v_student_grades TO 'role_counselor'@'%';
+
+-- c. 成绩统计分析（辅助查看课程信息：course 表仅读）
+GRANT SELECT ON mydb.course TO 'role_counselor'@'%';
+
+
+
+

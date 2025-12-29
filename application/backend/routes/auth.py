@@ -5,25 +5,23 @@ from db_helper import db
 
 auth_bp = Blueprint('auth', __name__)
 
-
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.json
-    username = data.get('username')  # 这里通常是学号或工号
+    username = data.get('username')  # 工号（教师/管理员/辅导员共用teacher_id）
     password = data.get('password')
-    role = data.get('role')  # 必须由前端传过来: 'admin', 'student', 'teacher', 'counselor'
+    role = data.get('role')  # 'admin', 'student', 'teacher', 'counselor'
 
     if not all([username, password, role]):
         return jsonify({"code": 400, "msg": "信息不完整"})
 
-    # 1. 根据角色确定查询哪张表
-    # 注意：这里假设你数据库里的表名分别是 Student, Teacher, Counselor, Admin
-    # 且主键/账号字段分别是 student_id, teacher_id 等
+    # 角色映射调整：admin和counselor也从teacher表查询，通过roll_type区分
     table_map = {
         'student': {'table': 'Student', 'id_col': 'student_id'},
-        'teacher': {'table': 'Teacher', 'id_col': 'teacher_id'},
-        'counselor': {'table': 'Counselor', 'id_col': 'counselor_id'},
-        'admin': {'table': 'Admin', 'id_col': 'admin_id'}
+        # 管理员和辅导员存储在teacher表，通过roll_type验证
+        'teacher': {'table': 'Teacher', 'id_col': 'teacher_id', 'roll_type': 'teacher'},
+        'admin': {'table': 'Teacher', 'id_col': 'teacher_id', 'roll_type': 'admin'},
+        'counselor': {'table': 'Teacher', 'id_col': 'teacher_id', 'roll_type': 'counselor'}
     }
 
     if role not in table_map:
@@ -33,41 +31,31 @@ def login():
     table_name = target['table']
     id_col = target['id_col']
 
-    # 2. 执行查询
-    # 为了高分：这里其实应该用哈希加密 (MD5/SHA256)，但为了3天做完，先用明文对比
-    # SQL: SELECT * FROM Student WHERE student_id = %s AND password = %s
-    sql = f"SELECT * FROM {table_name} WHERE {id_col} = %s AND password = %s"
+    # 构造查询SQL：如果是teacher/admin/counselor，需要额外校验roll_type
+    if table_name == 'Teacher':
+        sql = f"SELECT * FROM {table_name} WHERE {id_col} = %s AND password = %s AND roll_type = %s"
+        params = (username, password, target['roll_type'])
+    else:
+        # 学生表查询逻辑不变
+        sql = f"SELECT * FROM {table_name} WHERE {id_col} = %s AND password = %s"
+        params = (username, password)
 
     try:
-        users = db.fetch_all(sql, (username, password))
-
+        users = db.fetch_all(sql, params)
         if users:
             user = users[0]
-            # 登录成功，返回用户信息
-            # 注意：不要把 password 返回给前端
             user.pop('password', None)
-
-            return jsonify(
-                {
-                    "code": 200,
-                    "msg": "登录成功",
-                    "data": {
-                        "token": "fake-jwt-token-for-demo",  # 简单的项目不需要真 token，前端存一下 user info 即可
-                        "role": role,
-                        "info": user
-                    }
-                })
+            return jsonify({
+                "code": 200,
+                "msg": "登录成功",
+                "data": {
+                    "token": "fake-jwt-token-for-demo",
+                    "role": role,
+                    "info": user
+                }
+            })
         else:
-            return jsonify({"code": 401, "msg": "账号或密码错误"})
-
+            return jsonify({"code": 401, "msg": "账号或密码错误，或角色不匹配"})
     except Exception as e:
         print(f"Login Error: {e}")
         return jsonify({"code": 500, "msg": "服务器内部错误"})
-
-
-# --- 扩展功能：注册 (满足文档中的人员注册要求) ---
-@auth_bp.route('/register', methods=['POST'])
-def register():
-    # 这是一个简单的注册接口，你可以根据时间决定是否实现
-    # 文档提到"人员注册审核" [cite: 40]，简单的做法是注册后 status=0 (待审核)
-    return jsonify({"code": 200, "msg": "注册接口开发中"})
