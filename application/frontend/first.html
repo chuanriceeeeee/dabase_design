@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生选课管理系统 - 登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: url('images/back.png') no-repeat center center / cover;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+        }
+        /* 登录卡片样式（保留原风格） */
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            padding: 40px 30px;
+            margin: 0 20px;
+            background-color: rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 17px #333;
+        }
+        .login-title {
+            text-align: center;
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .form-input {
+            width: 100%;
+            height: 46px;
+            padding: 0 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #333;
+            outline: none;
+            transition: border-color 0.3s ease;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        .form-input:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+        .form-input::placeholder {
+            color: #999;
+        }
+        /* 角色下拉框（保留原风格） */
+        .role-select {
+            width: 100%;
+            height: 46px;
+            padding: 0 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #333;
+            outline: none;
+            transition: border-color 0.3s ease;
+            background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 15px center / 16px 16px,
+                        rgba(255, 255, 255, 0.9); 
+            padding-right: 40px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        .role-select:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+        /* 登录选项栏（新增注册入口） */
+        .login-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .remember-box {
+            display: flex;
+            align-items: center;
+            color: #666;
+        }
+        .remember-checkbox {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        .link-text {
+            color: #4a90e2;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .link-text:hover {
+            color: #357abd;
+            text-decoration: underline;
+        }
+        /* 登录按钮 */
+        .login-btn {
+            width: 100%;
+            height: 48px;
+            background-color: #4a90e2;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .login-btn:hover {
+            background-color: #357abd;
+        }
+        .login-btn:disabled {
+            background-color: rgba(74, 144, 226, 0.6);
+            cursor: not-allowed;
+        }
+        /* 注册弹窗样式（可选，若用弹窗式注册） */
+        .register-modal {
+            display: none; /* 默认隐藏 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .register-card {
+            width: 100%;
+            max-width: 420px;
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(8px);
+        }
+        .register-title {
+            text-align: center;
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 20px;
+            color: #666;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        .close-btn:hover {
+            color: #e53e3e;
+        }
+    </style>
+    <!-- 引入axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <!-- 登录卡片（原页面内容） -->
+    <div class="login-card">
+        <h2 class="login-title">学生选课管理系统</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="userRole" class="form-label">请选择角色</label>
+                <select id="userRole" class="role-select" required>
+                    <option value="" disabled selected>-- 请选择登录角色 --</option>
+                    <option value="student" selected>学生</option>
+                    <option value="teacher">教师</option>
+                    <option value="counselor">辅导员</option>
+                    <option value="admin">管理员</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="username" class="form-label">用户名/学号/工号</label>
+                <input type="text" id="username" class="form-input" placeholder="请输入用户名/学号/工号" value="2012001" required>
+            </div>
+            <div class="form-group">
+                <label for="password" class="form-label">登录密码</label>
+                <input type="password" id="password" class="form-input" placeholder="请输入登录密码" value="***" required>
+            </div>
+            <div class="login-option">
+                <div class="remember-box">
+                    <input type="checkbox" id="rememberPwd" class="remember-checkbox">
+                    <label for="rememberPwd">记住密码</label>
+                </div>
+                <!-- 新增：注册入口 -->
+                <a href="javascript:void(0)" class="link-text" id="registerLink">注册账号</a>
+                <a href="#" class="link-text">忘记密码？</a>
+            </div>
+            <button type="submit" class="login-btn" id="loginBtn">登录系统</button>
+        </form>
+    </div>
+
+    <!-- 注册弹窗（新增） -->
+    <div class="register-modal" id="registerModal">
+        <div class="register-card" style="position: relative;">
+            <button class="close-btn" id="closeRegister">×</button>
+            <h2 class="register-title">账号注册</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerRole" class="form-label">注册角色</label>
+                    <select id="registerRole" class="role-select" required>
+                        <option value="" disabled selected>-- 请选择注册角色 --</option>
+                        <option value="student" selected>学生</option>
+                        <option value="teacher">教师</option>
+                        <option value="counselor">辅导员</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="registerUsername" class="form-label">学号/工号</label>
+                    <input type="text" id="registerUsername" class="form-input" placeholder="请输入学生学号/教师工号" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerName" class="form-label">真实姓名</label>
+                    <input type="text" id="registerName" class="form-input" placeholder="请输入您的真实姓名" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword" class="form-label">设置密码</label>
+                    <input type="password" id="registerPassword" class="form-input" placeholder="请设置6位以上密码" required>
+                </div>
+                <button type="submit" class="login-btn" id="registerBtn">完成注册</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 登录表单元素
+        const loginForm = document.getElementById('loginForm');
+        const userRole = document.getElementById('userRole');
+        const username = document.getElementById('username');
+        const password = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const rememberPwd = document.getElementById('rememberPwd');
+        
+        // 注册弹窗元素
+        const registerModal = document.getElementById('registerModal');
+        const registerLink = document.getElementById('registerLink');
+        const closeRegister = document.getElementById('closeRegister');
+        const registerForm = document.getElementById('registerForm');
+        const registerRole = document.getElementById('registerRole');
+        const registerUsername = document.getElementById('registerUsername');
+        const registerName = document.getElementById('registerName');
+        const registerPassword = document.getElementById('registerPassword');
+        const confirmPassword = document.getElementById('confirmPassword');
+        const registerBtn = document.getElementById('registerBtn');
+
+        // 打开注册弹窗
+        registerLink.addEventListener('click', () => {
+            registerModal.style.display = 'flex';
+        });
+
+        // 关闭注册弹窗
+        closeRegister.addEventListener('click', () => {
+            registerModal.style.display = 'none';
+        });
+        // 点击弹窗外部关闭
+        window.addEventListener('click', (e) => {
+            if (e.target === registerModal) {
+                registerModal.style.display = 'none';
+            }
+        });
+
+        // 登录表单提交
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginBtn.disabled = true;
+            loginBtn.innerText = '登录中...';
+            try {
+                const response = await axios.post('http://127.0.0.1:5000/api/auth/login', {
+                    username: username.value.trim(),
+                    password: password.value.trim(),
+                    role: userRole.value
+                }, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.data.code === 200) {
+                    alert('登录成功！');
+                    // 登录成功逻辑（如跳转页面）
+                } else {
+                    alert(`登录失败：${response.data.msg}`);
+                }
+            } catch (error) {
+                alert('登录失败：无法连接服务器或账号密码错误');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerText = '登录系统';
+            }
+        });
+
+        // 注册表单提交
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // 表单校验
+            registerBtn.disabled = true;
+            registerBtn.innerText = '注册中...';
+            try {
+                const response = await axios.post('http://127.0.0.1:5000/api/auth/register', {
+                    username: registerUsername.value.trim(),
+                    password: registerPassword.value.trim(),
+                    name: registerName.value.trim(),
+                    role: registerRole.value
+                }, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.data.code === 200) {
+                    alert('注册成功！请登录');
+                    registerModal.style.display = 'none';
+                    registerForm.reset();
+                } else {
+                    alert(`注册失败：${response.data.msg}`);
+                }
+            } catch (error) {
+                alert('注册失败：无法连接服务器或账号已存在');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.innerText = '完成注册';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Microsoft YaHei", sans-serif;
+}
+
+body {
+    background-color: #f0f2f5;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    background-color: #2f4050;
+    color: #fff;
+    padding: 16px 24px;
+    font-size: 20px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.header-title-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 0 1 auto;
+    min-width: 180px;
+}
+
+.header-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.welcome-text {
+    font-size: 14px;
+    font-weight: normal;
+    color: #a7b1c2;
+    display: flex;
+    align-items: center;
+}
+
+.content {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    max-width: 100vw;
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar {
+    width: 220px;
+    background-color: #2f4050;
+    color: #a7b1c2;
+    padding: 0;
+    flex-shrink: 0;
+    height: calc(100vh - 64px);
+    overflow-y: auto;
+}
+
+.sidebar-menu {
+    list-style: none;
+}
+
+.menu-group-title {
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    background-color: #1f2d3d;
+    color: #8798ad;
+    border-bottom: 1px solid #293846;
+}
+
+.menu-item {
+    border-left: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.menu-btn {
+    display: block;
+    width: 100%;
+    padding: 12px 24px;
+    text-align: left;
+    border: none;
+    background-color: transparent;
+    color: #a7b1c2;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-item.active {
+    border-left: 3px solid #1ab394;
+    background-color: #293846;
+}
+
+.menu-btn.active,
+.menu-btn:hover {
+    color: #fff;
+}
+
+.main {
+    flex: 1;
+    background-color: #fff;
+    padding: 24px;
+    min-height: calc(100vh - 64px);
+    overflow-y: auto;
+}
+
+.panel {
+    display: none;
+    width: 100%;
+}
+
+.panel.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.panel-title {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+    font-weight: 600;
+}
+
+.common-table,
+.course-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    border: 1px solid #e6e6e6;
+}
+
+.common-table th,
+.common-table td,
+.course-table th,
+.course-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.common-table th,
+.course-table th {
+    background-color: #f8f9fa;
+    font-weight: 500;
+    color: #666;
+}
+
+.common-table tr:hover,
+.course-table tr:hover {
+    background-color: #fafbfc;
+}
+
+.btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.3s;
+}
+
+.btn-primary {
+    background-color: #1ab394;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #18a689;
+}
+
+.btn-danger {
+    background-color: #e53e3e;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #c53030;
+}
+
+.btn-default {
+    background-color: #e2e8f0;
+    color: #666;
+}
+
+.btn-default:hover {
+    background-color: #cbd5e1;
+}
+
+.btn-success {
+    background-color: #38a169;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background-color: #2f855a;
+}
+
+.query-filter,
+.course-filter {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-input,
+.class-select,
+.form-select-small {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 280px;
+    font-size: 14px;
+}
+
+.search-input:focus,
+.class-select:focus,
+.form-select-small:focus {
+    outline: none;
+    border-color: #1ab394;
+}
+
+.class-select,
+.form-select-small {
+    width: 200px;
+}
+
+.form-container,
+.info-form,
+.report-form {
+    max-width: 600px;
+    background-color: #f8f9fa;
+    padding: 24px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    margin-bottom: 24px;
+}
+
+.form-item {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: #1ab394;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+    .content {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+    }
+
+    .query-filter,
+    .course-filter {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .search-input,
+    .class-select,
+    .form-select-small {
+        width: 100%;
+    }
+
+    .welcome-text {
+        font-size: 12px;
+    }
+
+    .header {
+        font-size: 16px;
+    }
+
+    .form-container,
+    .info-form,
+    .report-form {
+        width: 100%;
+    }
+
+    .stats-container {
+        flex-direction: column;
+    }
+
+    .chart-wrapper {
+        min-width: 100%;
+    }
+
+    .chart-container {
+        height: 350px !important;
+    }
+}
+
+.failed-tag {
+    background-color: #fef0f0;
+    color: #e53e3e;
+    font-weight: 600;
+}
+
+.stats-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.stats-card {
+    flex: 1;
+    min-width: 200px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.stats-card-title {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.stats-card-value {
+    font-size: 24px;
+    color: #2f4050;
+    font-weight: 600;
+}
+
+.chart-wrapper {
+    padding: 20px;
+    width: 100%;
+    min-width: 500px;
+    margin-bottom: 30px;
+}
+
+.chart-container {
+    width: 100%;
+    height: 450px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #f8f9fa;
+}

@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生选课管理系统 - 管理员中心</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- 引入axios用于接口请求 -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <div class="header-title-wrap">
+            <div class="header-title">学生选课管理系统</div>
+        </div>
+        <div class="welcome-text" id="welcome-admin">欢迎您，管理员</div>
+    </header>
+
+    <!-- 核心内容区 -->
+    <div class="content">
+        <!-- 左侧管理员功能导航（替换原有辅导员导航） -->
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="menu-group-title">管理员功能</li>
+                <li class="menu-item active">
+                    <button class="menu-btn active" onclick="switchPanel('base-data-panel')">
+                        <span>基础数据管理</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('course-term-panel')">
+                        <span>课程安排与学期管理</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('report-generate-panel')">
+                        <span>生成报表</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="logout()">
+                        <span>退出登录</span>
+                    </button>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- 右侧管理员功能面板（核心功能实现） -->
+        <main class="main">
+            <!-- 面板1：基础数据管理（专业+班级+学生+教师+课程） -->
+            <div class="panel active" id="base-data-panel">
+                <h3 class="panel-title">基础数据管理</h3>
+
+                <!-- 子功能切换：专业/班级/学生/教师/课程 -->
+                <div class="query-filter" style="margin-bottom: 30px;">
+                    <button class="btn btn-primary active" onclick="switchBaseDataTab('major-tab')">专业管理</button>
+                    <button class="btn btn-default" onclick="switchBaseDataTab('class-tab')">班级管理</button>
+                    <button class="btn btn-default" onclick="switchBaseDataTab('student-tab')">学生管理</button>
+                    <button class="btn btn-default" onclick="switchBaseDataTab('teacher-tab')">教师管理</button>
+                    <button class="btn btn-default" onclick="switchBaseDataTab('course-tab')">课程管理</button>
+                </div>
+
+                <!-- 1. 专业管理标签页 -->
+                <div class="base-data-tab active" id="major-tab">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">专业信息维护</h4>
+                        <div class="form-item">
+                            <label class="form-label">专业名称</label>
+                            <input type="text" class="form-input" id="major-name" placeholder="请输入专业名称（如：计算机科学与技术）">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="operateMajor('add')">添加专业</button>
+                            <button class="btn btn-danger" onclick="operateMajor('delete')">删除选中专业</button>
+                            <button class="btn btn-default" onclick="operateMajor('edit')">修改选中专业</button>
+                            <button class="btn btn-default" onclick="resetMajorForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 专业列表 -->
+                    <table class="common-table" id="major-table">
+                        <thead>
+                            <tr>
+                                <th>专业ID</th>
+                                <th>专业名称</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="major-tbody">
+                            <tr>
+                                <td>1</td>
+                                <td>计算机科学与技术</td>
+                                <td><input type="radio" name="major-radio" value="1"></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>软件工程</td>
+                                <td><input type="radio" name="major-radio" value="2"></td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>网络工程</td>
+                                <td><input type="radio" name="major-radio" value="3"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 2. 班级管理标签页（默认隐藏） -->
+                <div class="base-data-tab" id="class-tab" style="display: none;">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">班级信息维护</h4>
+                        <div class="form-item">
+                            <label class="form-label">所属专业</label>
+                            <select class="form-select" id="class-major">
+                                <option value="" disabled selected>-- 请选择专业 --</option>
+                                <option value="1">计算机科学与技术</option>
+                                <option value="2">软件工程</option>
+                                <option value="3">网络工程</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">班级名称</label>
+                            <input type="text" class="form-input" id="class-name" placeholder="请输入班级名称（如：计科2023-1班）">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="operateClass('add')">添加班级</button>
+                            <button class="btn btn-danger" onclick="operateClass('delete')">删除选中班级</button>
+                            <button class="btn btn-default" onclick="operateClass('edit')">修改选中班级</button>
+                            <button class="btn btn-default" onclick="resetClassForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 班级列表 -->
+                    <table class="common-table" id="class-table">
+                        <thead>
+                            <tr>
+                                <th>班级ID</th>
+                                <th>班级名称</th>
+                                <th>所属专业</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="class-tbody">
+                            <tr>
+                                <td>1</td>
+                                <td>计科2023-1班</td>
+                                <td>计算机科学与技术</td>
+                                <td><input type="radio" name="class-radio" value="1"></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>软工2023-1班</td>
+                                <td>软件工程</td>
+                                <td><input type="radio" name="class-radio" value="2"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 3. 学生管理标签页（默认隐藏） -->
+                <div class="base-data-tab" id="student-tab" style="display: none;">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">学生信息维护</h4>
+                        <div class="form-item">
+                            <label class="form-label">学生学号</label>
+                            <input type="text" class="form-input" id="student-no" placeholder="请输入学生学号">
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">学生姓名</label>
+                            <input type="text" class="form-input" id="student-name" placeholder="请输入学生姓名">
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">所属班级</label>
+                            <select class="form-select" id="student-class">
+                                <option value="" disabled selected>-- 请选择班级 --</option>
+                                <option value="1">计科2023-1班</option>
+                                <option value="2">软工2023-1班</option>
+                            </select>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="operateStudent('add')">添加学生</button>
+                            <button class="btn btn-danger" onclick="operateStudent('delete')">删除选中学生</button>
+                            <button class="btn btn-default" onclick="operateStudent('edit')">修改选中学生</button>
+                            <button class="btn btn-default" onclick="resetStudentForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 学生列表 -->
+                    <table class="common-table" id="student-table">
+                        <thead>
+                            <tr>
+                                <th>学号</th>
+                                <th>姓名</th>
+                                <th>班级</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-tbody">
+                            <tr>
+                                <td>2023001001</td>
+                                <td>张三</td>
+                                <td>计科2023-1班</td>
+                                <td><input type="radio" name="student-radio" value="2023001001"></td>
+                            </tr>
+                            <tr>
+                                <td>2023001002</td>
+                                <td>李四</td>
+                                <td>计科2023-1班</td>
+                                <td><input type="radio" name="student-radio" value="2023001002"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 4. 教师管理标签页（默认隐藏） -->
+                <div class="base-data-tab" id="teacher-tab" style="display: none;">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">教师信息维护</h4>
+                        <div class="form-item">
+                            <label class="form-label">教师工号</label>
+                            <input type="text" class="form-input" id="teacher-no" placeholder="请输入教师工号">
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">教师姓名</label>
+                            <input type="text" class="form-input" id="teacher-name" placeholder="请输入教师姓名">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="operateTeacher('add')">添加教师</button>
+                            <button class="btn btn-danger" onclick="operateTeacher('delete')">删除选中教师</button>
+                            <button class="btn btn-default" onclick="operateTeacher('edit')">修改选中教师</button>
+                            <button class="btn btn-default" onclick="resetTeacherForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 教师列表 -->
+                    <table class="common-table" id="teacher-table">
+                        <thead>
+                            <tr>
+                                <th>工号</th>
+                                <th>姓名</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-tbody">
+                            <tr>
+                                <td>T001</td>
+                                <td>王老师</td>
+                                <td><input type="radio" name="teacher-radio" value="T001"></td>
+                            </tr>
+                            <tr>
+                                <td>T002</td>
+                                <td>李老师</td>
+                                <td><input type="radio" name="teacher-radio" value="T002"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 5. 课程管理标签页（默认隐藏） -->
+                <div class="base-data-tab" id="course-tab" style="display: none;">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">课程信息维护</h4>
+                        <div class="form-item">
+                            <label class="form-label">课程编号</label>
+                            <input type="text" class="form-input" id="course-no" placeholder="请输入课程编号">
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">课程名称</label>
+                            <input type="text" class="form-input" id="course-name" placeholder="请输入课程名称">
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">授课教师</label>
+                            <select class="form-select" id="course-teacher">
+                                <option value="" disabled selected>-- 请选择教师 --</option>
+                                <option value="T001">王老师</option>
+                                <option value="T002">李老师</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">最大选课人数</label>
+                            <input type="number" class="form-input" id="course-max-student" placeholder="请输入最大选课人数" min="1">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="operateCourse('add')">添加课程</button>
+                            <button class="btn btn-danger" onclick="operateCourse('delete')">删除选中课程</button>
+                            <button class="btn btn-default" onclick="operateCourse('edit')">修改选中课程</button>
+                            <button class="btn btn-default" onclick="resetCourseForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 课程列表 -->
+                    <table class="common-table" id="course-table">
+                        <thead>
+                            <tr>
+                                <th>课程编号</th>
+                                <th>课程名称</th>
+                                <th>授课教师</th>
+                                <th>最大选课人数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="course-tbody">
+                            <tr>
+                                <td>C001</td>
+                                <td>高等数学（上）</td>
+                                <td>王老师</td>
+                                <td>50</td>
+                                <td><input type="radio" name="course-radio" value="C001"></td>
+                            </tr>
+                            <tr>
+                                <td>C002</td>
+                                <td>大学英语（一）</td>
+                                <td>李老师</td>
+                                <td>40</td>
+                                <td><input type="radio" name="course-radio" value="C002"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 面板2：课程安排与学期管理 -->
+            <div class="panel" id="course-term-panel">
+                <h3 class="panel-title">课程安排与学期管理</h3>
+
+                <!-- 子功能切换：学期管理/课程表管理 -->
+                <div class="query-filter" style="margin-bottom: 30px;">
+                    <button class="btn btn-primary active" onclick="switchCourseTermTab('term-tab')">学期管理</button>
+                    <button class="btn btn-default" onclick="switchCourseTermTab('schedule-tab')">课程表管理</button>
+                </div>
+
+                <!-- 1. 学期管理标签页 -->
+                <div class="course-term-tab active" id="term-tab">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">学期信息维护</h4>
+                        <div class="form-item">
+                            <label class="form-label">学期名称</label>
+                            <input type="text" class="form-input" id="term-name" placeholder="请输入学期名称（如：2024-2025学年第一学期）">
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">学期状态</label>
+                            <select class="form-select" id="term-status">
+                                <option value="active" selected>当前学期</option>
+                                <option value="inactive">历史学期</option>
+                            </select>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="operateTerm('add')">添加学期</button>
+                            <button class="btn btn-danger" onclick="operateTerm('delete')">删除选中学期</button>
+                            <button class="btn btn-default" onclick="operateTerm('edit')">修改选中学期</button>
+                            <button class="btn btn-default" onclick="resetTermForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 学期列表 -->
+                    <table class="common-table" id="term-table">
+                        <thead>
+                            <tr>
+                                <th>学期ID</th>
+                                <th>学期名称</th>
+                                <th>学期状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="term-tbody">
+                            <tr>
+                                <td>1</td>
+                                <td>2024-2025学年第一学期</td>
+                                <td>当前学期</td>
+                                <td><input type="radio" name="term-radio" value="1"></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>2023-2024学年第二学期</td>
+                                <td>历史学期</td>
+                                <td><input type="radio" name="term-radio" value="2"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 2. 课程表管理标签页（默认隐藏） -->
+                <div class="course-term-tab" id="schedule-tab" style="display: none;">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">课程表信息维护</h4>
+                        <div class="form-item">
+                            <label class="form-label">所属学期</label>
+                            <select class="form-select" id="schedule-term">
+                                <option value="" disabled selected>-- 请选择学期 --</option>
+                                <option value="1">2024-2025学年第一学期</option>
+                                <option value="2">2023-2024学年第二学期</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">课程名称</label>
+                            <select class="form-select" id="schedule-course">
+                                <option value="" disabled selected>-- 请选择课程 --</option>
+                                <option value="C001">高等数学（上）</option>
+                                <option value="C002">大学英语（一）</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">授课教师</label>
+                            <select class="form-select" id="schedule-teacher">
+                                <option value="" disabled selected>-- 请选择教师 --</option>
+                                <option value="T001">王老师</option>
+                                <option value="T002">李老师</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">上课时间</label>
+                            <input type="text" class="form-input" id="schedule-time" placeholder="请输入上课时间（如：周一1-2节）">
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">上课地点</label>
+                            <input type="text" class="form-input" id="schedule-address" placeholder="请输入上课地点（如：教学楼A201）">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="operateSchedule('add')">添加课程安排</button>
+                            <button class="btn btn-danger" onclick="operateSchedule('delete')">删除选中课程安排</button>
+                            <button class="btn btn-default" onclick="operateSchedule('edit')">修改选中课程安排</button>
+                            <button class="btn btn-default" onclick="resetScheduleForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 课程安排列表 -->
+                    <table class="common-table" id="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>安排ID</th>
+                                <th>学期名称</th>
+                                <th>课程名称</th>
+                                <th>授课教师</th>
+                                <th>上课时间</th>
+                                <th>上课地点</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedule-tbody">
+                            <tr>
+                                <td>1</td>
+                                <td>2024-2025学年第一学期</td>
+                                <td>高等数学（上）</td>
+                                <td>王老师</td>
+                                <td>周一1-2节</td>
+                                <td>教学楼A201</td>
+                                <td><input type="radio" name="schedule-radio" value="1"></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>2024-2025学年第一学期</td>
+                                <td>大学英语（一）</td>
+                                <td>李老师</td>
+                                <td>周三3-4节</td>
+                                <td>教学楼B302</td>
+                                <td><input type="radio" name="schedule-radio" value="2"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 面板3：生成报表（学生选课+教师上课） -->
+            <div class="panel" id="report-generate-panel">
+                <h3 class="panel-title">生成报表</h3>
+
+                <!-- 子功能切换：学生选课报表/教师上课报表 -->
+                <div class="query-filter" style="margin-bottom: 30px;">
+                    <button class="btn btn-primary active" onclick="switchReportTab('enroll-report-tab')">学生选课情况报表</button>
+                    <button class="btn btn-default" onclick="switchReportTab('teacher-report-tab')">教师上课情况报表</button>
+                </div>
+
+                <!-- 1. 学生选课情况报表 -->
+                <div class="report-tab active" id="enroll-report-tab">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">生成学生选课报表</h4>
+                        <div class="form-item">
+                            <label class="form-label">所属学期</label>
+                            <select class="form-select" id="enroll-report-term">
+                                <option value="" disabled selected>-- 请选择学期 --</option>
+                                <option value="1">2024-2025学年第一学期</option>
+                                <option value="2">2023-2024学年第二学期</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">报表格式</label>
+                            <select class="form-select" id="enroll-report-format">
+                                <option value="excel" selected>Excel</option>
+                                <option value="pdf">PDF</option>
+                                <option value="word">Word</option>
+                            </select>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-success" onclick="generateEnrollReport()">生成报表</button>
+                            <button class="btn btn-default" onclick="resetEnrollReportForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 学生选课报表列表 -->
+                    <table class="common-table" id="enroll-report-table">
+                        <thead>
+                            <tr>
+                                <th>报表名称</th>
+                                <th>学期</th>
+                                <th>格式</th>
+                                <th>生成时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enroll-report-tbody">
+                            <tr>
+                                <td>2024-2025学年第一学期学生选课报表</td>
+                                <td>2024-2025学年第一学期</td>
+                                <td>Excel</td>
+                                <td>2025-12-29 10:30:00</td>
+                                <td><button class="btn btn-primary">下载</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 2. 教师上课情况报表（默认隐藏） -->
+                <div class="report-tab" id="teacher-report-tab" style="display: none;">
+                    <div class="form-container">
+                        <h4 style="margin-bottom: 16px; font-size: 16px; color: #333;">生成教师上课报表</h4>
+                        <div class="form-item">
+                            <label class="form-label">所属学期</label>
+                            <select class="form-select" id="teacher-report-term">
+                                <option value="" disabled selected>-- 请选择学期 --</option>
+                                <option value="1">2024-2025学年第一学期</option>
+                                <option value="2">2023-2024学年第二学期</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label class="form-label">报表格式</label>
+                            <select class="form-select" id="teacher-report-format">
+                                <option value="excel" selected>Excel</option>
+                                <option value="pdf">PDF</option>
+                                <option value="word">Word</option>
+                            </select>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-success" onclick="generateTeacherReport()">生成报表</button>
+                            <button class="btn btn-default" onclick="resetTeacherReportForm()">重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 教师上课报表列表 -->
+                    <table class="common-table" id="teacher-report-table">
+                        <thead>
+                            <tr>
+                                <th>报表名称</th>
+                                <th>学期</th>
+                                <th>格式</th>
+                                <th>生成时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-report-tbody">
+                            <tr>
+                                <td>2024-2025学年第一学期教师上课报表</td>
+                                <td>2024-2025学年第一学期</td>
+                                <td>Excel</td>
+                                <td>2025-12-29 10:40:00</td>
+                                <td><button class="btn btn-primary">下载</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 全局配置
+        axios.defaults.baseURL = 'http://127.0.0.1:5000';
+
+        // 页面加载初始化
+        window.onload = function() {
+            loadAdminInfo();
+        };
+
+        // 1. 切换顶级功能面板（基础数据/课程学期/报表）
+        function switchPanel(panelId) {
+            // 隐藏所有面板
+            const allPanels = document.querySelectorAll('.panel');
+            allPanels.forEach(panel => panel.classList.remove('active'));
+            // 移除所有菜单激活状态
+            const allMenuItems = document.querySelectorAll('.menu-item');
+            const allMenuBtns = document.querySelectorAll('.menu-btn');
+            allMenuItems.forEach(item => item.classList.remove('active'));
+            allMenuBtns.forEach(btn => btn.classList.remove('active'));
+            // 显示目标面板
+            document.getElementById(panelId).classList.add('active');
+            // 激活目标菜单
+            const targetMenuItem = event.target.closest('.menu-item');
+            targetMenuItem.classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 2. 切换基础数据管理子标签（专业/班级/学生等）
+        function switchBaseDataTab(tabId) {
+            // 隐藏所有子标签
+            const allTabs = document.querySelectorAll('.base-data-tab');
+            allTabs.forEach(tab => tab.style.display = 'none');
+            // 移除所有按钮激活状态
+            const allBtns = document.querySelectorAll('.query-filter button');
+            allBtns.forEach(btn => {
+                btn.classList.remove('btn-primary', 'active');
+                btn.classList.add('btn-default');
+            });
+            // 显示目标标签
+            document.getElementById(tabId).style.display = 'block';
+            // 激活目标按钮
+            event.target.classList.remove('btn-default');
+            event.target.classList.add('btn-primary', 'active');
+        }
+
+        // 3. 切换课程安排与学期管理子标签（学期/课程表）
+        function switchCourseTermTab(tabId) {
+            // 隐藏所有子标签
+            const allTabs = document.querySelectorAll('.course-term-tab');
+            allTabs.forEach(tab => tab.style.display = 'none');
+            // 移除所有按钮激活状态
+            const allBtns = document.querySelectorAll('.query-filter button');
+            allBtns.forEach(btn => {
+                btn.classList.remove('btn-primary', 'active');
+                btn.classList.add('btn-default');
+            });
+            // 显示目标标签
+            document.getElementById(tabId).style.display = 'block';
+            // 激活目标按钮
+            event.target.classList.remove('btn-default');
+            event.target.classList.add('btn-primary', 'active');
+        }
+
+        // 4. 切换报表生成子标签（学生选课/教师上课）
+        function switchReportTab(tabId) {
+            // 隐藏所有子标签
+            const allTabs = document.querySelectorAll('.report-tab');
+            allTabs.forEach(tab => tab.style.display = 'none');
+            // 移除所有按钮激活状态
+            const allBtns = document.querySelectorAll('.query-filter button');
+            allBtns.forEach(btn => {
+                btn.classList.remove('btn-primary', 'active');
+                btn.classList.add('btn-default');
+            });
+            // 显示目标标签
+            document.getElementById(tabId).style.display = 'block';
+            // 激活目标按钮
+            event.target.classList.remove('btn-default');
+            event.target.classList.add('btn-primary', 'active');
+        }
+
+        // 5. 加载管理员信息
+        function loadAdminInfo() {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            if (userInfo.name) {
+                document.getElementById('welcome-admin').textContent = `欢迎您，${userInfo.name}（管理员）`;
+            }
+        }
+
+        // ========== 基础数据管理 - 专业操作 ==========
+        function operateMajor(type) {
+            const majorName = document.getElementById('major-name').value.trim();
+            const selectedRadio = document.querySelector('input[name="major-radio"]:checked');
+            const selectedId = selectedRadio ? selectedRadio.value : '';
+
+            switch (type) {
+                case 'add':
+                    if (!majorName) {
+                        alert('请输入专业名称！');
+                        return;
+                    }
+                    alert(`添加专业成功：${majorName}`);
+                    resetMajorForm();
+                    // 实际项目中添加axios请求后端接口
+                    break;
+                case 'delete':
+                    if (!selectedId) {
+                        alert('请先选中要删除的专业！');
+                        return;
+                    }
+                    if (confirm('确定要删除该专业吗？删除后关联班级将一并删除！')) {
+                        alert(`删除专业成功，专业ID：${selectedId}`);
+                        // 实际项目中添加axios请求后端接口
+                    }
+                    break;
+                case 'edit':
+                    if (!selectedId || !majorName) {
+                        alert('请先选中专业并输入新的专业名称！');
+                        return;
+                    }
+                    alert(`修改专业成功，专业ID：${selectedId}，新名称：${majorName}`);
+                    resetMajorForm();
+                    // 实际项目中添加axios请求后端接口
+                    break;
+            }
+        }
+
+        function resetMajorForm() {
+            document.getElementById('major-name').value = '';
+            const allRadios = document.querySelectorAll('input[name="major-radio"]');
+            allRadios.forEach(radio => radio.checked = false);
+        }
+
+        // ========== 基础数据管理 - 班级操作（其余学生/教师/课程操作逻辑类似，仅弹窗提示） ==========
+        function operateClass(type) {
+            const className = document.getElementById('class-name').value.trim();
+            const majorId = document.getElementById('class-major').value;
+            const selectedId = document.querySelector('input[name="class-radio"]:checked')?.value || '';
+
+            switch (type) {
+                case 'add':
+                    if (!majorId || !className) {
+                        alert('请选择所属专业并输入班级名称！');
+                        return;
+                    }
+                    alert(`添加班级成功：${className}（所属专业ID：${majorId}）`);
+                    resetClassForm();
+                    break;
+                case 'delete':
+                    if (!selectedId) {
+                        alert('请先选中要删除的班级！');
+                        return;
+                    }
+                    if (confirm('确定要删除该班级吗？')) {
+                        alert(`删除班级成功，班级ID：${selectedId}`);
+                    }
+                    break;
+                case 'edit':
+                    if (!selectedId || !majorId || !className) {
+                        alert('请先选中班级并填写完整信息！');
+                        return;
+                    }
+                    alert(`修改班级成功，班级ID：${selectedId}，新名称：${className}`);
+                    resetClassForm();
+                    break;
+            }
+        }
+
+        function resetClassForm() {
+            document.getElementById('class-name').value = '';
+            document.getElementById('class-major').selectedIndex = 0;
+            document.querySelectorAll('input[name="class-radio"]').forEach(radio => radio.checked = false);
+        }
+
+        // ========== 学生操作（简化版，逻辑同专业/班级） ==========
+        function operateStudent(type) {
+            const studentNo = document.getElementById('student-no').value.trim();
+            const studentName = document.getElementById('student-name').value.trim();
+            const classId = document.getElementById('student-class').value;
+            const selectedId = document.querySelector('input[name="student-radio"]:checked')?.value || '';
+
+            switch (type) {
+                case 'add':
+                    if (!studentNo || !studentName || !classId) {
+                        alert('请填写完整学生信息！');
+                        return;
+                    }
+                    alert(`添加学生成功：${studentName}（学号：${studentNo}）`);
+                    resetStudentForm();
+                    break;
+                case 'delete':
+                    if (!selectedId) {
+                        alert('请先选中要删除的学生！');
+                        return;
+                    }
+                    if (confirm('确定要删除该学生吗？')) {
+                        alert(`删除学生成功，学号：${selectedId}`);
+                    }
+                    break;
+                case 'edit':
+                    if (!selectedId || !studentNo || !studentName || !classId) {
+                        alert('请先选中学生并填写完整信息！');
+                        return;
+                    }
+                    alert(`修改学生成功，学号：${selectedId}，新姓名：${studentName}`);
+                    resetStudentForm();
+                    break;
+            }
+        }
+
+        function resetStudentForm() {
+            document.getElementById('student-no').value = '';
+            document.getElementById('student-name').value = '';
+            document.getElementById('student-class').selectedIndex = 0;
+            document.querySelectorAll('input[name="student-radio"]').forEach(radio => radio.checked = false);
+        }
+
+        // ========== 教师操作（简化版） ==========
+        function operateTeacher(type) {
+            const teacherNo = document.getElementById('teacher-no').value.trim();
+            const teacherName = document.getElementById('teacher-name').value.trim();
+            const selectedId = document.querySelector('input[name="teacher-radio"]:checked')?.value || '';
+
+            switch (type) {
+                case 'add':
+                    if (!teacherNo || !teacherName) {
+                        alert('请填写完整教师信息！');
+                        return;
+                    }
+                    alert(`添加教师成功：${teacherName}（工号：${teacherNo}）`);
+                    resetTeacherForm();
+                    break;
+                case 'delete':
+                    if (!selectedId) {
+                        alert('请先选中要删除的教师！');
+                        return;
+                    }
+                    if (confirm('确定要删除该教师吗？')) {
+                        alert(`删除教师成功，工号：${selectedId}`);
+                    }
+                    break;
+                case 'edit':
+                    if (!selectedId || !teacherNo || !teacherName) {
+                        alert('请先选中教师并填写完整信息！');
+                        return;
+                    }
+                    alert(`修改教师成功，工号：${selectedId}，新姓名：${teacherName}`);
+                    resetTeacherForm();
+                    break;
+            }
+        }
+
+        function resetTeacherForm() {
+            document.getElementById('teacher-no').value = '';
+            document.getElementById('teacher-name').value = '';
+            document.querySelectorAll('input[name="teacher-radio"]').forEach(radio => radio.checked = false);
+        }
+
+        // ========== 课程操作（简化版） ==========
+        function operateCourse(type) {
+            const courseNo = document.getElementById('course-no').value.trim();
+            const courseName = document.getElementById('course-name').value.trim();
+            const teacherId = document.getElementById('course-teacher').value;
+            const maxStudent = document.getElementById('course-max-student').value;
+            const selectedId = document.querySelector('input[name="course-radio"]:checked')?.value || '';
+
+            switch (type) {
+                case 'add':
+                    if (!courseNo || !courseName || !teacherId || !maxStudent) {
+                        alert('请填写完整课程信息！');
+                        return;
+                    }
+                    alert(`添加课程成功：${courseName}（课程编号：${courseNo}）`);
+                    resetCourseForm();
+                    break;
+                case 'delete':
+                    if (!selectedId) {
+                        alert('请先选中要删除的课程！');
+                        return;
+                    }
+                    if (confirm('确定要删除该课程吗？')) {
+                        alert(`删除课程成功，课程编号：${selectedId}`);
+                    }
+                    break;
+                case 'edit':
+                    if (!selectedId || !courseNo || !courseName || !teacherId || !maxStudent) {
+                        alert('请先选中课程并填写完整信息！');
+                        return;
+                    }
+                    alert(`修改课程成功，课程编号：${selectedId}，新名称：${courseName}`);
+                    resetCourseForm();
+                    break;
+            }
+        }
+
+        function resetCourseForm() {
+            document.getElementById('course-no').value = '';
+            document.getElementById('course-name').value = '';
+            document.getElementById('course-teacher').selectedIndex = 0;
+            document.getElementById('course-max-student').value = '';
+            document.querySelectorAll('input[name="course-radio"]').forEach(radio => radio.checked = false);
+        }
+
+        // ========== 课程安排与学期管理 - 学期操作 ==========
+        function operateTerm(type) {
+            const termName = document.getElementById('term-name').value.trim();
+            const termStatus = document.getElementById('term-status').value;
+            const selectedId = document.querySelector('input[name="term-radio"]:checked')?.value || '';
+
+            switch (type) {
+                case 'add':
+                    if (!termName) {
+                        alert('请输入学期名称！');
+                        return;
+                    }
+                    alert(`添加学期成功：${termName}（状态：${termStatus === 'active' ? '当前学期' : '历史学期'}）`);
+                    resetTermForm();
+                    break;
+                case 'delete':
+                    if (!selectedId) {
+                        alert('请先选中要删除的学期！');
+                        return;
+                    }
+                    if (confirm('确定要删除该学期吗？删除后关联课程安排将一并删除！')) {
+                        alert(`删除学期成功，学期ID：${selectedId}`);
+                    }
+                    break;
+                case 'edit':
+                    if (!selectedId || !termName) {
+                        alert('请先选中学期并输入新的学期名称！');
+                        return;
+                    }
+                    alert(`修改学期成功，学期ID：${selectedId}，新名称：${termName}`);
+                    resetTermForm();
+                    break;
+            }
+        }
+
+        function resetTermForm() {
+            document.getElementById('term-name').value = '';
+            document.getElementById('term-status').selectedIndex = 0;
+            document.querySelectorAll('input[name="term-radio"]').forEach(radio => radio.checked = false);
+        }
+
+        // ========== 课程安排与学期管理 - 课程表操作 ==========
+        function operateSchedule(type) {
+            const termId = document.getElementById('schedule-term').value;
+            const courseId = document.getElementById('schedule-course').value;
+            const teacherId = document.getElementById('schedule-teacher').value;
+            const scheduleTime = document.getElementById('schedule-time').value.trim();
+            const scheduleAddr = document.getElementById('schedule-address').value.trim();
+            const selectedId = document.querySelector('input[name="schedule-radio"]:checked')?.value || '';
+
+            switch (type) {
+                case 'add':
+                    if (!termId || !courseId || !teacherId || !scheduleTime || !scheduleAddr) {
+                        alert('请填写完整课程安排信息！');
+                        return;
+                    }
+                    alert(`添加课程安排成功：${scheduleTime} ${scheduleAddr}`);
+                    resetScheduleForm();
+                    break;
+                case 'delete':
+                    if (!selectedId) {
+                        alert('请先选中要删除的课程安排！');
+                        return;
+                    }
+                    if (confirm('确定要删除该课程安排吗？')) {
+                        alert(`删除课程安排成功，安排ID：${selectedId}`);
+                    }
+                    break;
+                case 'edit':
+                    if (!selectedId || !termId || !courseId || !teacherId || !scheduleTime || !scheduleAddr) {
+                        alert('请先选中课程安排并填写完整信息！');
+                        return;
+                    }
+                    alert(`修改课程安排成功，安排ID：${selectedId}`);
+                    resetScheduleForm();
+                    break;
+            }
+        }
+
+        function resetScheduleForm() {
+            document.getElementById('schedule-term').selectedIndex = 0;
+            document.getElementById('schedule-course').selectedIndex = 0;
+            document.getElementById('schedule-teacher').selectedIndex = 0;
+            document.getElementById('schedule-time').value = '';
+            document.getElementById('schedule-address').value = '';
+            document.querySelectorAll('input[name="schedule-radio"]').forEach(radio => radio.checked = false);
+        }
+
+        // ========== 报表生成 - 学生选课报表 ==========
+        function generateEnrollReport() {
+            const termId = document.getElementById('enroll-report-term').value;
+            const reportFormat = document.getElementById('enroll-report-format').value;
+            const formatName = document.querySelector(`#enroll-report-format option[value="${reportFormat}"]`).textContent;
+            const termName = document.querySelector(`#enroll-report-term option[value="${termId}"]`)?.textContent || '';
+
+            if (!termId) {
+                alert('请选择要生成报表的学期！');
+                return;
+            }
+
+            alert(`学生选课报表生成成功！
+学期：${termName}
+格式：${formatName}
+即将开始下载...`);
+
+            // 添加报表记录（模拟）
+            addEnrollReportRecord(termName, formatName);
+            resetEnrollReportForm();
+        }
+
+        function addEnrollReportRecord(termName, formatName) {
+            const tbody = document.getElementById('enroll-report-tbody');
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            const newTr = document.createElement('tr');
+            newTr.innerHTML = `
+                <td>${termName}学生选课报表</td>
+                <td>${termName}</td>
+                <td>${formatName}</td>
+                <td>${timeStr}</td>
+                <td><button class="btn btn-primary">下载</button></td>
+            `;
+            tbody.insertBefore(newTr, tbody.firstChild);
+        }
+
+        function resetEnrollReportForm() {
+            document.getElementById('enroll-report-term').selectedIndex = 0;
+            document.getElementById('enroll-report-format').selectedIndex = 0;
+        }
+
+        // ========== 报表生成 - 教师上课报表 ==========
+        function generateTeacherReport() {
+            const termId = document.getElementById('teacher-report-term').value;
+            const reportFormat = document.getElementById('teacher-report-format').value;
+            const formatName = document.querySelector(`#teacher-report-format option[value="${reportFormat}"]`).textContent;
+            const termName = document.querySelector(`#teacher-report-term option[value="${termId}"]`)?.textContent || '';
+
+            if (!termId) {
+                alert('请选择要生成报表的学期！');
+                return;
+            }
+
+            alert(`教师上课报表生成成功！
+学期：${termName}
+格式：${formatName}
+即将开始下载...`);
+
+            // 添加报表记录（模拟）
+            addTeacherReportRecord(termName, formatName);
+            resetTeacherReportForm();
+        }
+
+        function addTeacherReportRecord(termName, formatName) {
+            const tbody = document.getElementById('teacher-report-tbody');
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            const newTr = document.createElement('tr');
+            newTr.innerHTML = `
+                <td>${termName}教师上课报表</td>
+                <td>${termName}</td>
+                <td>${formatName}</td>
+                <td>${timeStr}</td>
+                <td><button class="btn btn-primary">下载</button></td>
+            `;
+            tbody.insertBefore(newTr, tbody.firstChild);
+        }
+
+        function resetTeacherReportForm() {
+            document.getElementById('teacher-report-term').selectedIndex = 0;
+            document.getElementById('teacher-report-format').selectedIndex = 0;
+        }
+
+        // ========== 退出登录 ==========
+        function logout() {
+            const confirmLogout = confirm('确认退出管理员登录吗？');
+            if (confirmLogout) {
+                // 清除本地存储
+                localStorage.clear();
+                alert('已成功退出登录！');
+                // 跳转回登录页
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

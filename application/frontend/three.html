@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生选课管理系统 - 教师端</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+       /* 筛选/查询区域样式 */
+        .query-filter {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input, .course-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 280px;
+            font-size: 14px;
+        }
+
+        .search-input:focus, .course-select:focus {
+            outline: none;
+            border-color: #1ab394;
+        }
+
+        .course-select {
+            width: 200px;
+        }
+    </style>
+    <!-- 引入axios（用于后端对接） -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- 引入ECharts 稳定版本（指定版本，避免兼容性问题） -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <div class="header-title-wrap">
+            <div class="header-title">学生选课管理系统</div>
+        </div>
+        <div class="welcome-text" id="welcome-teacher">欢迎您，李老师</div>
+    </header>
+
+    <!-- 核心内容区 -->
+    <div class="content">
+        <!-- 左侧教师功能导航 -->
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="menu-group-title">教师功能</li>
+                <li class="menu-item active">
+                    <button class="menu-btn active" onclick="switchPanel('course-student-panel')">
+                        <span>课程及学生查询</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('score-manage-panel')">
+                        <span>成绩录入与修改</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('score-stats-panel')">
+                        <span>成绩统计分析</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="logout()">
+                        <span>退出登录</span>
+                    </button>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- 右侧教师功能面板 -->
+        <main class="main">
+            <!-- 面板1：课程及选课学生查询 -->
+            <div class="panel active" id="course-student-panel">
+                <h3 class="panel-title">教授课程及选课学生名单查询</h3>
+                <div class="query-filter">
+                    <select class="course-select" id="teacher-course-select" onchange="getStudentListByCourse()">
+                        <option value="">-- 请选择教授课程 --</option>
+                        <option value="C001">C001 - 高等数学（上）</option>
+                        <option value="C002">C002 - 大学英语（一）</option>
+                        <option value="C003">C003 - 计算机基础</option>
+                    </select>
+                    <input type="text" class="search-input" id="student-search" placeholder="输入学生学号/姓名搜索">
+                    <button class="btn btn-primary" onclick="searchStudent()">搜索学生</button>
+                    <button class="btn btn-default" onclick="resetStudentSearch()">重置</button>
+                </div>
+
+                <!-- 教授课程信息 -->
+                <h4 style="margin: 16px 0; font-size: 16px; color: #333;" id="course-info-title">请先选择一门教授课程</h4>
+
+                <!-- 选课学生名单表格 -->
+                <table class="common-table" id="student-list-table">
+                    <thead>
+                        <tr>
+                            <th>学生学号</th>
+                            <th>学生姓名</th>
+                            <th>性别</th>
+                            <th>专业</th>
+                            <th>联系电话</th>
+                            <th>选课时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-list-tbody">
+                        <tr>
+                            <td colspan="6" align="center">暂无数据，请先选择课程</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 面板2：成绩录入与修改 -->
+            <div class="panel" id="score-manage-panel">
+                <h3 class="panel-title">学生成绩录入与修改</h3>
+                <div class="query-filter">
+                    <select class="course-select" id="score-course-select" onchange="getStudentListForScore()">
+                        <option value="">-- 请选择教授课程 --</option>
+                        <option value="C001">C001 - 高等数学（上）</option>
+                        <option value="C002">C002 - 大学英语（一）</option>
+                        <option value="C003">C003 - 计算机基础</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="saveAllScores()">批量保存成绩</button>
+                    <button class="btn btn-default" onclick="resetScoreInput()">重置成绩输入</button>
+                </div>
+
+                <!-- 成绩录入表格 -->
+                <table class="common-table" id="score-input-table">
+                    <thead>
+                        <tr>
+                            <th>学生学号</th>
+                            <th>学生姓名</th>
+                            <th>当前成绩</th>
+                            <th>成绩录入/修改</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="score-input-tbody">
+                        <tr>
+                            <td colspan="5" align="center">暂无数据，请先选择课程</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 面板3：成绩统计分析 -->
+            <div class="panel" id="score-stats-panel">
+                <h3 class="panel-title">课程成绩统计分析</h3>
+                <div class="query-filter">
+                    <select class="course-select" id="stats-course-select" onchange="loadScoreStats()">
+                        <option value="">-- 请选择教授课程 --</option>
+                        <option value="C001">C001 - 高等数学（上）</option>
+                        <option value="C002">C002 - 大学英语（一）</option>
+                        <option value="C003">C003 - 计算机基础</option>
+                    </select>
+                </div>
+
+                <!-- 成绩统计卡片 -->
+                <div class="stats-container" id="score-stats-container">
+                    <div class="stats-card">
+                        <div class="stats-card-title">参考学生总数</div>
+                        <div class="stats-card-value" id="total-student-count">0</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">平均成绩</div>
+                        <div class="stats-card-value" id="avg-score">0.0</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">最高分</div>
+                        <div class="stats-card-value" id="max-score">0</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">最低分</div>
+                        <div class="stats-card-value" id="min-score">0</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">及格率（60分及以上）</div>
+                        <div class="stats-card-value" id="pass-rate">0.00%</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">优秀率（90分及以上）</div>
+                        <div class="stats-card-value" id="excellent-rate">0.00%</div>
+                    </div>
+                </div>
+
+                <!-- 成绩分布图表 -->
+                <div class="chart-container" id="score-distribution-chart"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // axios 全局配置（后端接口基础路径，根据实际修改）
+        axios.defaults.baseURL = 'http://localhost:8080';
+        axios.defaults.headers.post['Content-Type'] = 'application/json;charset=utf-8';
+
+        // 全局变量：存储当前选择的课程ID、学生列表、成绩列表
+        let currentCourseId = '';
+        let studentList = [];
+        let scoreList = [];
+        // 全局ECharts实例（初始化前置为null，避免报错）
+        let scoreChart = null;
+
+        // ========== 核心修复：页面加载完成后再初始化图表 ==========
+        window.addEventListener('DOMContentLoaded', function() {
+            // 延迟初始化图表，确保容器已渲染到DOM中
+            setTimeout(() => {
+                initScoreChart();
+            }, 100);
+        });
+
+        // 初始化ECharts图表实例（单独提取，确保容器存在）
+        function initScoreChart() {
+            const chartDom = document.getElementById('score-distribution-chart');
+            // 校验容器是否存在
+            if (!chartDom) {
+                console.error('图表容器未找到！');
+                return;
+            }
+            // 避免重复初始化
+            if (!scoreChart) {
+                scoreChart = echarts.init(chartDom);
+                // 设置默认空配置，避免初始空白
+                const defaultOption = {
+                    title: {
+                        text: '请选择课程查看成绩分布',
+                        left: 'center',
+                        fontSize: 16
+                    },
+                    tooltip: {},
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left'
+                    },
+                    series: [{
+                        name: '学生人数',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        center: ['50%', '50%'],
+                        data: [],
+                        label: {
+                            show: true,
+                            formatter: '{b}：{c}人'
+                        }
+                    }],
+                    backgroundColor: 'transparent'
+                };
+                scoreChart.setOption(defaultOption);
+            }
+            // 绑定窗口自适应事件
+            window.addEventListener('resize', function() {
+                if (scoreChart) {
+                    scoreChart.resize();
+                }
+            });
+        }
+
+        // 1. 切换功能面板
+        function switchPanel(panelId) {
+            // 隐藏所有面板
+            const allPanels = document.querySelectorAll('.panel');
+            allPanels.forEach(panel => panel.classList.remove('active'));
+            // 移除所有菜单激活状态
+            const allMenuItems = document.querySelectorAll('.menu-item');
+            const allMenuBtns = document.querySelectorAll('.menu-btn');
+            allMenuItems.forEach(item => item.classList.remove('active'));
+            allMenuBtns.forEach(btn => btn.classList.remove('active'));
+            // 显示目标面板+激活对应菜单
+            document.getElementById(panelId).classList.add('active');
+            const targetMenuItem = event.target.closest('.menu-item');
+            if (targetMenuItem) {
+                targetMenuItem.classList.add('active');
+                event.target.classList.add('active');
+            }
+
+            // 若切换到统计面板，且已选课程，重新加载统计数据
+            if (panelId === 'score-stats-panel' && currentCourseId) {
+                // 确保图表已初始化
+                if (!scoreChart) {
+                    initScoreChart();
+                }
+                loadScoreStats();
+            }
+        }
+
+        // 2. 面板1：根据课程获取选课学生列表
+        function getStudentListByCourse() {
+            const courseSelect = document.getElementById('teacher-course-select');
+            currentCourseId = courseSelect.value;
+            const courseText = courseSelect.options[courseSelect.selectedIndex].text;
+            const courseInfoTitle = document.getElementById('course-info-title');
+            const studentTbody = document.getElementById('student-list-tbody');
+
+            // 未选择课程
+            if (!currentCourseId) {
+                courseInfoTitle.textContent = '请先选择一门教授课程';
+                studentTbody.innerHTML = '<tr><td colspan="6" align="center">暂无数据，请先选择课程</td></tr>';
+                studentList = [];
+                return;
+            }
+
+            // 显示课程信息
+            courseInfoTitle.textContent = `当前课程：${courseText}`;
+
+            // 模拟后端请求（实际项目中替换为真实接口）
+            mockGetStudentList().then(res => {
+                studentList = res.data;
+                renderStudentList(studentList);
+            });
+        }
+
+        // 3. 面板1：渲染学生列表
+        function renderStudentList(list) {
+            const studentTbody = document.getElementById('student-list-tbody');
+            if (list.length === 0) {
+                studentTbody.innerHTML = '<tr><td colspan="6" align="center">该课程暂无学生选课</td></tr>';
+                return;
+            }
+
+            let html = '';
+            list.forEach(student => {
+                html += `
+                    <tr>
+                        <td>${student.studentId}</td>
+                        <td>${student.studentName}</td>
+                        <td>${student.gender}</td>
+                        <td>${student.major}</td>
+                        <td>${student.phone}</td>
+                        <td>${student.selectTime}</td>
+                    </tr>
+                `;
+            });
+            studentTbody.innerHTML = html;
+        }
+
+        // 4. 面板1：搜索学生（按学号/姓名）
+        function searchStudent() {
+            if (!currentCourseId) {
+                alert('请先选择一门课程！');
+                return;
+            }
+            const keyword = document.getElementById('student-search').value.trim().toLowerCase();
+            if (!keyword) {
+                alert('请输入搜索关键词！');
+                return;
+            }
+            // 筛选学生
+            const filteredList = studentList.filter(student => 
+                student.studentId.toLowerCase().includes(keyword) || 
+                student.studentName.toLowerCase().includes(keyword)
+            );
+            renderStudentList(filteredList);
+        }
+
+        // 5. 面板1：重置学生搜索
+        function resetStudentSearch() {
+            document.getElementById('student-search').value = '';
+            if (currentCourseId) {
+                renderStudentList(studentList);
+            }
+        }
+
+        // 6. 面板2：根据课程获取学生列表（用于成绩录入）
+        function getStudentListForScore() {
+            const courseSelect = document.getElementById('score-course-select');
+            currentCourseId = courseSelect.value;
+            const scoreTbody = document.getElementById('score-input-tbody');
+
+            // 未选择课程
+            if (!currentCourseId) {
+                scoreTbody.innerHTML = '<tr><td colspan="5" align="center">暂无数据，请先选择课程</td></tr>';
+                scoreList = [];
+                return;
+            }
+
+            // 模拟后端请求（获取学生及当前成绩）
+            mockGetScoreList().then(res => {
+                scoreList = res.data;
+                renderScoreInputList(scoreList);
+            });
+        }
+
+        // 7. 面板2：渲染成绩录入列表
+        function renderScoreInputList(list) {
+            const scoreTbody = document.getElementById('score-input-tbody');
+            if (list.length === 0) {
+                scoreTbody.innerHTML = '<tr><td colspan="5" align="center">该课程暂无学生选课</td></tr>';
+                return;
+            }
+
+            let html = '';
+            list.forEach(score => {
+                html += `
+                    <tr>
+                        <td>${score.studentId}</td>
+                        <td>${score.studentName}</td>
+                        <td id="current-score-${score.studentId}">${score.score || '未录入'}</td>
+                        <td><input type="number" class="score-input" id="score-input-${score.studentId}" 
+                            placeholder="0-100" min="0" max="100" value="${score.score || ''}"></td>
+                        <td><button class="btn btn-primary" onclick="saveSingleScore('${score.studentId}')">单独保存</button></td>
+                    </tr>
+                `;
+            });
+            scoreTbody.innerHTML = html;
+        }
+
+        // 8. 面板2：单独保存单个学生成绩
+        function saveSingleScore(studentId) {
+            if (!currentCourseId) {
+                alert('请先选择课程！');
+                return;
+            }
+            const scoreInput = document.getElementById(`score-input-${studentId}`);
+            const scoreValue = Number(scoreInput.value.trim());
+            const currentScoreDom = document.getElementById(`current-score-${studentId}`);
+
+            // 校验成绩
+            if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 100) {
+                alert('请输入有效的成绩（0-100之间的数字）！');
+                scoreInput.focus();
+                return;
+            }
+
+            // 模拟后端请求（保存单个成绩）
+            mockSaveScore(studentId, scoreValue).then(res => {
+                if (res.code === 200) {
+                    alert('成绩保存成功！');
+                    // 更新页面显示
+                    currentScoreDom.textContent = scoreValue;
+                    // 更新本地分数列表
+                    scoreList.forEach(item => {
+                        if (item.studentId === studentId) {
+                            item.score = scoreValue;
+                        }
+                    });
+                } else {
+                    alert('成绩保存失败：' + res.msg);
+                }
+            });
+        }
+
+        // 9. 面板2：批量保存所有学生成绩
+        function saveAllScores() {
+            if (!currentCourseId || scoreList.length === 0) {
+                alert('请先选择课程并录入成绩！');
+                return;
+            }
+
+            // 收集所有录入的成绩
+            const batchScoreList = [];
+            let hasInvalidScore = false;
+            scoreList.forEach(score => {
+                const scoreInput = document.getElementById(`score-input-${score.studentId}`);
+                const scoreValue = Number(scoreInput.value.trim());
+                // 未录入成绩则跳过
+                if (scoreInput.value.trim() === '') {
+                    return;
+                }
+                // 校验成绩
+                if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 100) {
+                    alert(`【${score.studentName}（${score.studentId}）】的成绩无效，请输入0-100之间的数字！`);
+                    scoreInput.focus();
+                    hasInvalidScore = true;
+                    return;
+                }
+                batchScoreList.push({
+                    courseId: currentCourseId,
+                    studentId: score.studentId,
+                    score: scoreValue
+                });
+            });
+
+            if (hasInvalidScore) {
+                return;
+            }
+
+            if (batchScoreList.length === 0) {
+                alert('暂无需要保存的成绩！');
+                return;
+            }
+
+            // 模拟后端批量保存请求
+            mockSaveBatchScore(batchScoreList).then(res => {
+                if (res.code === 200) {
+                    alert('批量成绩保存成功！');
+                    // 更新页面显示及本地列表
+                    batchScoreList.forEach(item => {
+                        document.getElementById(`current-score-${item.studentId}`).textContent = item.score;
+                        scoreList.forEach(score => {
+                            if (score.studentId === item.studentId) {
+                                score.score = item.score;
+                            }
+                        });
+                    });
+                } else {
+                    alert('批量成绩保存失败：' + res.msg);
+                }
+            });
+        }
+
+        // 10. 面板2：重置成绩输入
+        function resetScoreInput() {
+            if (!currentCourseId || scoreList.length === 0) {
+                return;
+            }
+            // 重置输入框为原始成绩
+            scoreList.forEach(score => {
+                const scoreInput = document.getElementById(`score-input-${score.studentId}`);
+                scoreInput.value = score.score || '';
+            });
+            alert('成绩输入框已重置！');
+        }
+
+        // 11. 面板3：加载成绩统计分析数据（核心修复：确保图表已初始化）
+        function loadScoreStats() {
+            const courseSelect = document.getElementById('stats-course-select');
+            currentCourseId = courseSelect.value;
+
+            // 未选择课程：重置统计数据和图表
+            if (!currentCourseId) {
+                // 重置统计卡片
+                document.getElementById('total-student-count').textContent = '0';
+                document.getElementById('avg-score').textContent = '0.0';
+                document.getElementById('max-score').textContent = '0';
+                document.getElementById('min-score').textContent = '0';
+                document.getElementById('pass-rate').textContent = '0.00%';
+                document.getElementById('excellent-rate').textContent = '0.00%';
+                // 重置图表
+                if (scoreChart) {
+                    scoreChart.setOption({
+                        title: { text: '请选择课程查看成绩分布' },
+                        series: [{ data: [] }]
+                    });
+                }
+                return;
+            }
+
+            // 确保图表已初始化
+            if (!scoreChart) {
+                initScoreChart();
+            }
+
+            // 模拟后端请求（获取成绩统计数据）
+            mockGetScoreStats().then(res => {
+                const stats = res.data;
+                // 更新统计卡片
+                document.getElementById('total-student-count').textContent = stats.totalCount;
+                document.getElementById('avg-score').textContent = stats.avgScore.toFixed(1);
+                document.getElementById('max-score').textContent = stats.maxScore;
+                document.getElementById('min-score').textContent = stats.minScore;
+                document.getElementById('pass-rate').textContent = stats.passRate.toFixed(2) + '%';
+                document.getElementById('excellent-rate').textContent = stats.excellentRate.toFixed(2) + '%';
+                // 渲染成绩分布图表
+                renderScoreChart(stats.scoreDistribution);
+            });
+        }
+
+        // 12. 面板3：渲染成绩分布图表（修复数据映射和配置）
+        function renderScoreChart(scoreDistribution) {
+            if (!scoreChart) {
+                initScoreChart();
+                return;
+            }
+
+            // 图表配置项（确保数据完整映射，样式清晰）
+            const option = {
+                title: {
+                    text: '课程成绩分布统计图',
+                    left: 'center',
+                    fontSize: 16,
+                    fontWeight: '600'
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}：{c} 人（{d}%）',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    textStyle: { color: '#fff' }
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: '10%',
+                    top: '20%',
+                    data: ['0-59分（不及格）', '60-69分（及格）', '70-79分（良好）', '80-89分（优秀）', '90-100分（卓越）'],
+                    textStyle: { fontSize: 12 }
+                },
+                series: [
+                    {
+                        name: '学生人数',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        center: ['55%', '50%'],
+                        data: [
+                            { value: scoreDistribution.fail, name: '0-59分（不及格）' },
+                            { value: scoreDistribution.pass, name: '60-69分（及格）' },
+                            { value: scoreDistribution.good, name: '70-79分（良好）' },
+                            { value: scoreDistribution.excellent, name: '80-89分（优秀）' },
+                            { value: scoreDistribution.excellentPlus, name: '90-100分（卓越）' }
+                        ],
+                        label: {
+                            show: true,
+                            formatter: '{b}：{c}人',
+                            fontSize: 12
+                        },
+                        // 强制显示所有数据，避免空值隐藏
+                        silent: false,
+                        ignoreEmptySeries: false
+                    }
+                ],
+                backgroundColor: 'transparent'
+            };
+
+            // 强制更新图表配置（覆盖旧数据）
+            scoreChart.setOption(option, true);
+            // 手动触发重绘，确保显示
+            scoreChart.resize();
+        }
+
+        // 13. 退出登录
+        function logout() {
+            const confirmLogout = confirm('确认退出教师端登录吗？');
+            if (confirmLogout) {
+                alert('已成功退出登录！');
+                // 实际项目中跳转登录页：window.location.href = "login.html";
+            }
+        }
+
+        // ==================== 模拟后端接口（实际项目中删除，替换为真实axios请求） ====================
+        // 模拟获取选课学生列表
+        function mockGetStudentList() {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        code: 200,
+                        msg: '成功',
+                        data: [
+                            { studentId: '2023001001', studentName: '张三', gender: '男', major: '计算机科学与技术', phone: '13800138000', selectTime: '2025-09-01 08:30:00' },
+                            { studentId: '2023001002', studentName: '李四', gender: '女', major: '计算机科学与技术', phone: '13800138001', selectTime: '2025-09-01 09:10:00' },
+                            { studentId: '2023001003', studentName: '王五', gender: '男', major: '软件工程', phone: '13800138002', selectTime: '2025-09-01 10:00:00' },
+                            { studentId: '2023001004', studentName: '赵六', gender: '女', major: '软件工程', phone: '13800138003', selectTime: '2025-09-01 11:00:00' },
+                            { studentId: '2023001005', studentName: '钱七', gender: '男', major: '网络工程', phone: '13800138004', selectTime: '2025-09-01 14:30:00' }
+                        ]
+                    });
+                }, 300);
+            });
+        }
+
+        // 模拟获取学生成绩列表
+        function mockGetScoreList() {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        code: 200,
+                        msg: '成功',
+                        data: [
+                            { studentId: '2023001001', studentName: '张三', score: 85 },
+                            { studentId: '2023001002', studentName: '李四', score: 92 },
+                            { studentId: '2023001003', studentName: '王五', score: 76 },
+                            { studentId: '2023001004', studentName: '赵六', score: 58 },
+                            { studentId: '2023001005', studentName: '钱七', score: null }
+                        ]
+                    });
+                }, 300);
+            });
+        }
+
+        // 模拟保存单个成绩
+        function mockSaveScore(studentId, score) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        code: 200,
+                        msg: '保存成功'
+                    });
+                }, 300);
+            });
+        }
+
+        // 模拟批量保存成绩
+        function mockSaveBatchScore(batchList) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        code: 200,
+                        msg: '批量保存成功'
+                    });
+                }, 300);
+            });
+        }
+
+        // 模拟获取成绩统计数据
+        function mockGetScoreStats() {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        code: 200,
+                        msg: '成功',
+                        data: {
+                            totalCount: 5, // 总人数
+                            avgScore: 77.75, // 平均分（排除未录入的钱七）
+                            maxScore: 92, // 最高分
+                            minScore: 58, // 最低分
+                            passRate: 75, // 及格率（3/4）
+                            excellentRate: 25, // 优秀率（1/4，90+）
+                            scoreDistribution: { // 成绩分布
+                                fail: 1, // 0-59
+                                pass: 0, // 60-69
+                                good: 1, // 70-79
+                                excellent: 1, // 80-89
+                                excellentPlus: 1 // 90-100
+                            }
+                        }
+                    });
+                }, 300);
+            });
+        }
+    </script>
+</body>
+</html>

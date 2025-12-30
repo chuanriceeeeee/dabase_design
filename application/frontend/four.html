@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生选课管理系统 - 辅导员中心</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+
+        /* 不及格学生标记样式 */
+        .failed-tag {
+            background-color: #fef0f0;
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+    </style>
+    <!-- 引入axios用于接口请求 -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- 引入ECharts用于成绩统计图表 -->
+    <script src="https://cdn.apache.org/dist/echarts/5.4.3/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <div class="header-title-wrap">
+            <div class="header-title">学生选课管理系统</div>
+        </div>
+        <div class="welcome-text" id="welcome-counselor">欢迎您，王辅导员</div>
+    </header>
+
+    <!-- 核心内容区 -->
+    <div class="content">
+        <!-- 左侧辅导员功能导航 -->
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="menu-group-title">辅导员功能</li>
+                <li class="menu-item active">
+                    <button class="menu-btn active" onclick="switchPanel('student-track-panel')">
+                        <span>学生信息跟踪</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('score-stats-panel')">
+                        <span>成绩统计分析</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('report-generate-panel')">
+                        <span>生成报表</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="logout()">
+                        <span>退出登录</span>
+                    </button>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- 右侧辅导员功能面板 -->
+        <main class="main">
+            <!-- 面板1：学生信息跟踪（查看选课+成绩，标记不及格学生） -->
+            <div class="panel active" id="student-track-panel">
+                <h3 class="panel-title">学生信息跟踪</h3>
+                <div class="query-filter">
+                    <select class="class-select" id="track-class-select">
+                        <option value="" disabled selected>-- 请选择班级 --</option>
+                        <option value="class1">计算机2023-1班</option>
+                        <option value="class2">计算机2023-2班</option>
+                        <option value="class3">软件工程2023-1班</option>
+                    </select>
+                    <input type="text" class="search-input" id="student-search" placeholder="输入学生学号/姓名搜索">
+                    <button class="btn btn-primary" onclick="searchTrackStudent()">搜索</button>
+                    <button class="btn btn-default" onclick="resetTrackSearch()">重置</button>
+                </div>
+
+                <!-- 学生列表（包含选课及成绩，不及格标记） -->
+                <table class="common-table" id="student-track-table">
+                    <thead>
+                        <tr>
+                            <th>学生学号</th>
+                            <th>学生姓名</th>
+                            <th>班级</th>
+                            <th>已选课程数</th>
+                            <th>不及格课程数</th>
+                            <th>核心课程成绩</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-track-tbody">
+                        <tr>
+                            <td>2023001001</td>
+                            <td>张三</td>
+                            <td>计算机2023-1班</td>
+                            <td>2</td>
+                            <td>0</td>
+                            <td>高等数学（85）、大学英语（92）</td>
+                            <td><button class="btn btn-primary" onclick="viewStudentDetail('2023001001', '张三')">查看详情</button></td>
+                        </tr>
+                        <tr>
+                            <td>2023001002</td>
+                            <td>李四</td>
+                            <td>计算机2023-1班</td>
+                            <td>2</td>
+                            <td>1</td>
+                            <td class="failed-tag">高等数学（58）、大学英语（76）</td>
+                            <td><button class="btn btn-primary" onclick="viewStudentDetail('2023001002', '李四')">查看详情</button></td>
+                        </tr>
+                        <tr>
+                            <td>2023001003</td>
+                            <td>王五</td>
+                            <td>计算机2023-1班</td>
+                            <td>2</td>
+                            <td>0</td>
+                            <td>高等数学（76）、大学英语（88）</td>
+                            <td><button class="btn btn-primary" onclick="viewStudentDetail('2023001003', '王五')">查看详情</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 面板2：成绩统计分析 -->
+            <div class="panel" id="score-stats-panel">
+                <h3 class="panel-title">成绩统计分析</h3>
+                <div class="query-filter">
+                    <select class="class-select" id="stats-class-select" onchange="loadScoreStats()">
+                        <option value="" disabled selected>-- 请选择班级 --</option>
+                        <option value="class1">计算机2023-1班</option>
+                        <option value="class2">计算机2023-2班</option>
+                        <option value="class3">软件工程2023-1班</option>
+                    </select>
+                    <select class="class-select" id="stats-course-select" onchange="loadScoreStats()">
+                        <option value="" disabled selected>-- 请选择课程 --</option>
+                        <option value="C001">高等数学（上）</option>
+                        <option value="C002">大学英语（一）</option>
+                        <option value="C003">计算机基础</option>
+                    </select>
+                </div>
+
+                <!-- 成绩统计卡片 -->
+                <div class="stats-container" id="score-stats-container">
+                    <div class="stats-card">
+                        <div class="stats-card-title">参考学生总数</div>
+                        <div class="stats-card-value" id="total-student-count">3</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">平均成绩</div>
+                        <div class="stats-card-value" id="avg-score">73.0</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">最高分</div>
+                        <div class="stats-card-value" id="max-score">92</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">最低分</div>
+                        <div class="stats-card-value" id="min-score">58</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">及格率</div>
+                        <div class="stats-card-value" id="pass-rate">66.67%</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-title">不及格人数</div>
+                        <div class="stats-card-value" id="failed-count">1</div>
+                    </div>
+                </div>
+
+                <!-- 成绩分布图表 -->
+                <div class="chart-wrapper">
+                    <div class="chart-container" id="score-distribution-chart"></div>
+                </div>
+            </div>
+
+            <!-- 面板3：生成报表 -->
+            <div class="panel" id="report-generate-panel">
+                <h3 class="panel-title">生成学生相关报表</h3>
+                <div class="report-form" id="report-form">
+                    <div class="form-item">
+                        <label class="form-label">报表类型</label>
+                        <select class="form-select" id="report-type" required>
+                            <option value="" disabled selected>-- 请选择报表类型 --</option>
+                            <option value="student_score">学生成绩报表</option>
+                            <option value="student_course">学生选课报表</option>
+                            <option value="failed_student">不及格学生统计报表</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">所属班级</label>
+                        <select class="form-select" id="report-class" required>
+                            <option value="" disabled selected>-- 请选择班级 --</option>
+                            <option value="class1">计算机2023-1班</option>
+                            <option value="class2">计算机2023-2班</option>
+                            <option value="class3">软件工程2023-1班</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">报表格式</label>
+                        <select class="form-select" id="report-format" required>
+                            <option value="excel" selected>Excel</option>
+                            <option value="pdf">PDF</option>
+                            <option value="word">Word</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-success" onclick="generateReport()">生成报表</button>
+                        <button type="button" class="btn btn-default" onclick="resetReportForm()">重置表单</button>
+                    </div>
+                </div>
+
+                <!-- 报表生成记录 -->
+                <h4 style="margin: 20px 0; font-size: 16px; color: #333;">报表生成记录</h4>
+                <table class="common-table" id="report-record-table">
+                    <thead>
+                        <tr>
+                            <th>报表名称</th>
+                            <th>班级</th>
+                            <th>格式</th>
+                            <th>生成时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-record-tbody">
+                        <tr>
+                            <td>计算机2023-1班成绩报表</td>
+                            <td>计算机2023-1班</td>
+                            <td>Excel</td>
+                            <td>2025-12-29 10:30:00</td>
+                            <td><button class="btn btn-primary">下载</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 全局配置
+        axios.defaults.baseURL = 'http://127.0.0.1:5000';
+        let scoreChart = null; // 成绩统计图表实例
+
+        // 页面加载初始化
+        window.onload = function() {
+            initECharts();
+            loadUserInfo();
+        };
+
+        // 1. 切换功能面板
+        function switchPanel(panelId) {
+            const allPanels = document.querySelectorAll('.panel');
+            allPanels.forEach(panel => panel.classList.remove('active'));
+            const allMenuItems = document.querySelectorAll('.menu-item');
+            const allMenuBtns = document.querySelectorAll('.menu-btn');
+            allMenuItems.forEach(item => item.classList.remove('active'));
+            allMenuBtns.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            const targetMenuItem = event.target.closest('.menu-item');
+            targetMenuItem.classList.add('active');
+            event.target.classList.add('active');
+
+            // 切换到统计面板时加载图表
+            if (panelId === 'score-stats-panel') {
+                initECharts();
+            }
+        }
+
+        // 2. 初始化ECharts图表
+        function initECharts() {
+            if (!scoreChart && document.getElementById('score-distribution-chart')) {
+                try {
+                    const chartDom = document.getElementById('score-distribution-chart');
+                    chartDom.style.width = '100%';
+                    chartDom.style.height = '450px';
+                    scoreChart = echarts.init(chartDom);
+                    // 默认图表配置
+                    const defaultOption = {
+                        title: { text: '请选择班级和课程查看成绩分布', left: 'center' },
+                        tooltip: { trigger: 'item' },
+                        legend: { left: 'left', orient: 'vertical' },
+                        series: [{ type: 'pie', radius: ['45%', '70%'], data: [] }]
+                    };
+                    scoreChart.setOption(defaultOption);
+                } catch (e) {
+                    console.error('图表初始化失败：', e);
+                }
+            }
+        }
+
+        // 3. 加载辅导员信息
+        function loadUserInfo() {
+            // 从localStorage获取用户信息
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            if (userInfo.name) {
+                document.getElementById('welcome-counselor').textContent = `欢迎您，${userInfo.name}（辅导员）`;
+            }
+        }
+
+        // 4. 学生信息跟踪 - 搜索学生
+        function searchTrackStudent() {
+            const searchKey = document.getElementById('student-search').value.trim().toLowerCase();
+            const classValue = document.getElementById('track-class-select').value;
+            const studentItems = document.querySelectorAll('#student-track-tbody tr');
+            
+            studentItems.forEach(tr => {
+                const studentId = tr.cells[0].textContent.toLowerCase();
+                const studentName = tr.cells[1].textContent.toLowerCase();
+                const studentClass = tr.cells[2].textContent;
+                let isMatch = (studentId.includes(searchKey) || studentName.includes(searchKey));
+                if (classValue) {
+                    // 匹配对应班级名称
+                    const className = document.querySelector(`#track-class-select option[value="${classValue}"]`).textContent;
+                    isMatch = isMatch && studentClass === className;
+                }
+                tr.style.display = isMatch ? '' : 'none';
+            });
+        }
+
+        // 5. 学生信息跟踪 - 重置搜索
+        function resetTrackSearch() {
+            document.getElementById('student-search').value = '';
+            document.getElementById('track-class-select').selectedIndex = 0;
+            document.querySelectorAll('#student-track-tbody tr').forEach(tr => tr.style.display = '');
+        }
+
+        // 6. 查看学生详情
+        function viewStudentDetail(studentId, studentName) {
+            alert(`查看【${studentName}（${studentId}）】详情：
+1. 已选课程：高等数学（上）、大学英语（一）
+2. 成绩情况：
+   - 高等数学（上）：${studentId === '2023001002' ? '58（不及格）' : '85（合格）'}
+   - 大学英语（一）：${studentId === '2023001001' ? '92（优秀）' : '76（合格）'}
+3. 选课状态：已完成选课`);
+        }
+
+        // 7. 加载成绩统计数据
+        function loadScoreStats() {
+            const classValue = document.getElementById('stats-class-select').value;
+            const courseValue = document.getElementById('stats-course-select').value;
+
+            if (!classValue || !courseValue) {
+                return;
+            }
+
+            // 模拟后端数据（实际可替换为axios请求）
+            const statsData = {
+                totalCount: 3,
+                avgScore: 73.0,
+                maxScore: 92,
+                minScore: 58,
+                passRate: 0.6667,
+                failedCount: 1,
+                scoreDistribution: [
+                    { name: '0-59分（不及格）', value: 1 },
+                    { name: '60-69分（及格）', value: 0 },
+                    { name: '70-79分（良好）', value: 1 },
+                    { name: '80-89分（优秀）', value: 1 },
+                    { name: '90-100分（卓越）', value: 1 }
+                ]
+            };
+
+            // 更新统计卡片
+            document.getElementById('total-student-count').textContent = statsData.totalCount;
+            document.getElementById('avg-score').textContent = statsData.avgScore.toFixed(1);
+            document.getElementById('max-score').textContent = statsData.maxScore;
+            document.getElementById('min-score').textContent = statsData.minScore;
+            document.getElementById('pass-rate').textContent = (statsData.passRate * 100).toFixed(2) + '%';
+            document.getElementById('failed-count').textContent = statsData.failedCount;
+
+            // 更新图表
+            const chartOption = {
+                title: { text: `【${document.querySelector(`#stats-class-select option[value="${classValue}"]`).textContent}】-${document.querySelector(`#stats-course-select option[value="${courseValue}"]`).textContent} 成绩分布`, left: 'center' },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}<br/>人数：{c} 人<br/>占比：{d}%'
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: '10%',
+                    top: 'center'
+                },
+                series: [
+                    {
+                        name: '学生人数',
+                        type: 'pie',
+                        radius: ['45%', '70%'],
+                        center: ['50%', '55%'],
+                        data: statsData.scoreDistribution,
+                        label: {
+                            show: true,
+                            formatter: '{b}：{c}人'
+                        },
+                        itemStyle: {
+                            color: function(params) {
+                                const colorList = ['#e53e3e', '#ed8936', '#ecc94b', '#48bb78', '#38a169'];
+                                return colorList[params.dataIndex] || '#999';
+                            }
+                        }
+                    }
+                ]
+            };
+            scoreChart.setOption(chartOption, true);
+        }
+
+        // 8. 生成报表
+        function generateReport() {
+            const reportType = document.getElementById('report-type').value;
+            const reportClass = document.getElementById('report-class').value;
+            const reportFormat = document.getElementById('report-format').value;
+
+            if (!reportType || !reportClass || !reportFormat) {
+                alert('请填写完整的报表信息！');
+                return;
+            }
+
+            // 获取显示名称
+            const reportTypeName = document.querySelector(`#report-type option[value="${reportType}"]`).textContent;
+            const reportClassName = document.querySelector(`#report-class option[value="${reportClass}"]`).textContent;
+            const reportFormatName = document.querySelector(`#report-format option[value="${reportFormat}"]`).textContent;
+
+            // 模拟报表生成成功
+            alert(`报表生成成功！
+报表类型：${reportTypeName}
+所属班级：${reportClassName}
+报表格式：${reportFormatName}
+即将开始下载...`);
+
+            // 添加生成记录
+            const reportRecordTbody = document.getElementById('report-record-tbody');
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            const newTr = document.createElement('tr');
+            newTr.innerHTML = `
+                <td>${reportClassName}${reportTypeName}</td>
+                <td>${reportClassName}</td>
+                <td>${reportFormatName}</td>
+                <td>${timeStr}</td>
+                <td><button class="btn btn-primary">下载</button></td>
+            `;
+            reportRecordTbody.insertBefore(newTr, reportRecordTbody.firstChild);
+        }
+
+        // 9. 重置报表表单
+        function resetReportForm() {
+            document.getElementById('report-type').selectedIndex = 0;
+            document.getElementById('report-class').selectedIndex = 0;
+            document.getElementById('report-format').selectedIndex = 0;
+        }
+
+        // 10. 退出登录
+        function logout() {
+            const confirmLogout = confirm('确认退出辅导员登录吗？');
+            if (confirmLogout) {
+                // 清除本地存储
+                localStorage.removeItem('token');
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userInfo');
+                localStorage.removeItem('userLoginInfo');
+                alert('已成功退出登录！');
+                // 跳转回登录页
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

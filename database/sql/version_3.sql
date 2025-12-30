@@ -311,6 +311,100 @@ GRANT SELECT ON mydb.v_student_grades TO 'role_counselor'@'%';
 -- c. 成绩统计分析（辅助查看课程信息：course 表仅读）
 GRANT SELECT ON mydb.course TO 'role_counselor'@'%';
 
+-- ===================== 测试数据初始化 =====================
+USE `mydb`;
 
+-- 1. 院系表（department）- 基础数据（无外键）
+INSERT INTO `department` (`dept_id`, `name`) VALUES
+('D001', '计算机学院'),
+('D002', '电子信息工程学院'),
+('D003', '工商管理学院');
+
+-- 2. 班级表（class）- 依赖department
+INSERT INTO `class` (`class_id`, `dept_id`, `name`) VALUES
+('C001', 'D001', '计算机科学与技术2023级1班'),
+('C002', 'D001', '软件工程2023级2班'),
+('C003', 'D002', '电子信息工程2023级1班'),
+('C004', 'D003', '市场营销2023级1班');
+
+-- 3. 教师表（teacher）- 依赖department，覆盖所有角色类型
+INSERT INTO `teacher` (`teacher_id`, `name`, `password`, `dept_id`, `role_type`) VALUES
+-- 管理员
+('T001', '系统管理员', 'admin123', 'D001', 'admin'),
+-- 普通教师
+('T002', '张三', 'teacher123', 'D001', 'teacher'),
+('T003', '李四', 'teacher123', 'D002', 'teacher'),
+-- 辅导员
+('T004', '王五', 'counselor123', 'D001', 'counselor'),
+('T005', '赵六', 'counselor123', 'D003', 'counselor');
+
+-- 4. 课程表（course）- 依赖teacher，覆盖不同容量/学分
+INSERT INTO `course` (`course_id`, `name`, `credits`, `capacity`, `teacher_id`) VALUES
+-- 计算机学院课程（T002授课）
+('CS001', 'Python程序设计', 3, 50, 'T002'),  -- 容量50
+('CS002', '数据结构与算法', 4, 2, 'T002'),   -- 容量2（用于测试"课程满"场景）
+-- 电子信息学院课程（T003授课）
+('EE001', '单片机原理', 3, 30, 'T003'),
+-- 容量已满的课程（用于测试存储过程）
+('CS003', '人工智能导论', 4, 2, 'T002');
+
+-- 5. 学生表（student）- 依赖department、class
+INSERT INTO `student` (`student_id`, `name`, `password`, `class_id`, `email`, `dept_id`) VALUES
+-- 计算机学院学生
+('S001', '小明', 'student123', 'C001', 'xiaoming@test.com', 'D001'),
+('S002', '小红', 'student123', 'C001', 'xiaohong@test.com', 'D001'),
+('S003', '小刚', 'student123', 'C002', 'xiaogang@test.com', 'D001'),
+-- 电子信息学院学生
+('S004', '小亮', 'student123', 'C003', 'xiaoliang@test.com', 'D002'),
+-- 工商管理学院学生
+('S005', '小丽', 'student123', 'C004', 'xiaoli@test.com', 'D003');
+
+-- 6. 选课表（enrollment）- 依赖course、student，覆盖多场景
+INSERT INTO `enrollment` (`course_id`, `student_id`, `score`, `status`) VALUES
+-- 场景1：正常选课（无成绩）
+('CS001', 'S001', NULL, 'enrolled'),
+('CS001', 'S002', NULL, 'enrolled'),
+('EE001', 'S004', NULL, 'enrolled'),
+-- 场景2：课程容量已满（CS002容量2，插入2条）
+('CS002', 'S001', NULL, 'enrolled'),
+('CS002', 'S002', NULL, 'enrolled'),
+-- 场景3：已录入成绩（用于测试触发器"禁止删除已录成绩的选课记录"）
+('CS001', 'S003', 85.5, 'enrolled'),
+('EE001', 'S001', 90.0, 'enrolled'),
+-- 场景4：容量已满的课程（CS003，插入2条）
+('CS003', 'S001', NULL, 'enrolled'),
+('CS003', 'S003', NULL, 'enrolled');
+
+-- ===================== 测试场景说明 =====================
+-- 1. 管理员账号：T001 / admin123（role_type=admin）
+-- 2. 普通教师账号：T002 / teacher123（role_type=teacher）
+-- 3. 辅导员账号：T004 / counselor123（role_type=counselor）
+-- 4. 学生账号：S001 / student123
+-- 5. 测试存储过程sp_student_enroll：
+--    - 选课CS002（容量2）：S003选课会返回"Course Full"
+--    - 重复选课CS001（S001已选）：返回"Already Enrolled"
+--    - 选不存在的课程（如XXX001）：返回"Course Not Exist"
+-- 6. 测试触发器trg_before_student_delete_course：
+--    - 删除S003的CS001选课记录（有成绩85.5）：触发异常
+-- 7. 测试触发器trg_prevent_student_delete：
+--    - 删除S001（有选课记录）：触发异常
+-- ===================== 权限测试补充（可选） =====================
+-- 创建测试用户并绑定角色（匹配你创建的数据库角色）
+CREATE USER IF NOT EXISTS 'test_student'@'%' IDENTIFIED BY 'student123';
+CREATE USER IF NOT EXISTS 'test_teacher'@'%' IDENTIFIED BY 'teacher123';
+CREATE USER IF NOT EXISTS 'test_admin'@'%' IDENTIFIED BY 'admin123';
+CREATE USER IF NOT EXISTS 'test_counselor'@'%' IDENTIFIED BY 'counselor123';
+
+-- 绑定角色
+GRANT 'role_student'@'%' TO 'test_student'@'%';
+GRANT 'role_teacher'@'%' TO 'test_teacher'@'%';
+GRANT 'role_admin'@'%' TO 'test_admin'@'%';
+GRANT 'role_counselor'@'%' TO 'test_counselor'@'%';
+
+-- 激活角色
+SET DEFAULT ROLE ALL TO 'test_student'@'%', 'test_teacher'@'%', 'test_admin'@'%', 'test_counselor'@'%';
+
+-- 刷新权限
+FLUSH PRIVILEGES;
 
 

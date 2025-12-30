@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生选课管理系统 - 学生中心</title>
+    <!-- 引入公共CSS（优先引入） -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 顶部导航栏 - 左侧新增标题容器，实现标题居中 -->
+    <header class="header">
+        <!-- 左侧标题容器：内部水平居中显示系统标题 -->
+        <div class="header-title-wrap">
+            <div class="header-title">学生选课管理系统</div>
+        </div>
+        <!-- 右侧：欢迎文字（保持右对齐） -->
+        <div class="welcome-text" id="welcome-user">欢迎您，张三</div>
+    </header>
+
+    <!-- 核心内容区（无修改，保留原有功能） -->
+    <div class="content">
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="menu-group-title">信息管理</li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('course-info-panel')">
+                        <span>课程信息</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('schedule-info-panel')">
+                        <span>课表信息</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('select-course-panel')">
+                        <span>选课信息</span>
+                    </button>
+                </li>
+                <li class="menu-item active">
+                    <button class="menu-btn active" onclick="switchPanel('update-info-panel')">
+                        <span>个人信息</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="switchPanel('change-pwd-panel')">
+                        <span>修改密码</span>
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <button class="menu-btn" onclick="logout()">
+                        <span>退出登录</span>
+                    </button>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="main">
+            <div class="panel" id="select-course-panel">
+                <h3 class="panel-title">课程选择与退课</h3>
+                <div class="course-filter">
+                    <input type="text" class="search-input" id="course-search" placeholder="输入课程名称/教师姓名搜索">
+                    <button class="btn btn-primary" onclick="searchCourse()">搜索课程</button>
+                    <button class="btn btn-default" onclick="resetSearch()">重置</button>
+                </div>
+                <table class="course-table">
+                    <thead>
+                        <tr>
+                            <th>课程编号</th>
+                            <th>课程名称</th>
+                            <th>教师姓名</th>
+                            <th>学分</th>
+                            <th>上课时间</th>
+                            <th>剩余名额</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="optional-course-list">
+                        <tr>
+                            <td>C001</td>
+                            <td>高等数学（上）</td>
+                            <td>李四</td>
+                            <td>5</td>
+                            <td>周一1-2节、周三3-4节</td>
+                            <td>25</td>
+                            <td><button class="btn btn-primary" onclick="selectCourse(this, 'C001', '高等数学（上）')">选课</button></td>
+                        </tr>
+                        <tr>
+                            <td>C002</td>
+                            <td>大学英语（一）</td>
+                            <td>王五</td>
+                            <td>4</td>
+                            <td>周二2-3节、周四4-5节</td>
+                            <td>18</td>
+                            <td><button class="btn btn-primary" onclick="selectCourse(this, 'C002', '大学英语（一）')">选课</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel" id="course-info-panel">
+                <h3 class="panel-title">可选课程信息查询</h3>
+                <div class="course-filter">
+                    <input type="text" class="search-input" id="query-course-search" placeholder="输入课程编号/名称搜索">
+                    <button class="btn btn-primary" onclick="queryCourse()">搜索</button>
+                    <button class="btn btn-default" onclick="resetQuery()">重置</button>
+                </div>
+                <table class="course-table">
+                    <thead>
+                        <tr>
+                            <th>课程编号</th>
+                            <th>课程名称</th>
+                            <th>教师姓名</th>
+                            <th>学分</th>
+                            <th>上课时间</th>
+                            <th>上课地点</th>
+                            <th>课程简介</th>
+                        </tr>
+                    </thead>
+                    <tbody id="query-course-list">
+                        <tr>
+                            <td>C001</td>
+                            <td>高等数学（上）</td>
+                            <td>李四</td>
+                            <td>5</td>
+                            <td>周一1-2节、周三3-4节</td>
+                            <td>教学楼A101</td>
+                            <td>高等数学基础课程，涵盖极限、导数等内容</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel" id="schedule-info-panel">
+                <h3 class="panel-title">已选课程及成绩</h3>
+                <table class="course-table">
+                    <thead>
+                        <tr>
+                            <th>课程编号</th>
+                            <th>课程名称</th>
+                            <th>教师姓名</th>
+                            <th>学分</th>
+                            <th>上课时间</th>
+                            <th>成绩</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="my-course-list">
+                        <tr id="course-C001">
+                            <td>C001</td>
+                            <td>高等数学（上）</td>
+                            <td>李四</td>
+                            <td>5</td>
+                            <td>周一1-2节、周三3-4节</td>
+                            <td>85</td>
+                            <td><button class="btn btn-danger" onclick="dropCourse(this, 'C001', '高等数学（上）')">退课</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel active" id="update-info-panel">
+                <h3 class="panel-title">个人信息</h3>
+                <form class="info-form" id="info-form">
+                    <div class="form-item">
+                        <label class="form-label">学号（不可修改）</label>
+                        <input type="text" class="form-input" id="student-id" value="2023001001" disabled>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">姓名</label>
+                        <input type="text" class="form-input" id="student-name" value="张三" required>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">性别</label>
+                        <select class="form-input" id="student-gender" required>
+                            <option value="男" selected>男</option>
+                            <option value="女">女</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">联系电话</label>
+                        <input type="tel" class="form-input" id="student-phone" value="13800138000" required>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">电子邮箱</label>
+                        <input type="email" class="form-input" id="student-email" value="zhangsan@xxx.com" required>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">专业</label>
+                        <input type="text" class="form-input" id="student-major" value="计算机科学与技术" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                        <button type="reset" class="btn btn-default">重置表单</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="panel" id="change-pwd-panel">
+                <h3 class="panel-title">修改密码</h3>
+                <form class="info-form" id="pwd-form">
+                    <div class="form-item">
+                        <label class="form-label">原密码</label>
+                        <input type="password" class="form-input" id="old-pwd" required>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">新密码</label>
+                        <input type="password" class="form-input" id="new-pwd" required>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">确认新密码</label>
+                        <input type="password" class="form-input" id="confirm-pwd" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">确认修改</button>
+                        <button type="reset" class="btn btn-default">重置表单</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let selectedCourses = ['C001'];
+
+        function switchPanel(panelId) {
+            const allPanels = document.querySelectorAll('.panel');
+            allPanels.forEach(panel => {
+                panel.classList.remove('active');
+            });
+            const allMenuItems = document.querySelectorAll('.menu-item');
+            const allMenuBtns = document.querySelectorAll('.menu-btn');
+            allMenuItems.forEach(item => item.classList.remove('active'));
+            allMenuBtns.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            event.target.closest('.menu-item').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function selectCourse(btn, courseId, courseName) {
+            if (selectedCourses.includes(courseId)) {
+                alert(`你已选择【${courseName}】，无需重复选课！`);
+                return;
+            }
+            const confirmSelect = confirm(`确认选择课程【${courseName}】吗？`);
+            if (!confirmSelect) return;
+
+            selectedCourses.push(courseId);
+            btn.textContent = "已选课";
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-default');
+            btn.disabled = true;
+
+            const myCourseList = document.getElementById('my-course-list');
+            const newCourseTr = document.createElement('tr');
+            newCourseTr.id = `course-${courseId}`;
+            let courseInfo = '';
+            if (courseId === 'C002') {
+                courseInfo = '<td>C002</td><td>大学英语（一）</td><td>王五</td><td>4</td><td>周二2-3节、周四4-5节</td><td>待考核</td>';
+            }
+            newCourseTr.innerHTML = `${courseInfo}<td><button class="btn btn-danger" onclick="dropCourse(this, '${courseId}', '${courseName}')">退课</button></td>`;
+            myCourseList.appendChild(newCourseTr);
+
+            alert(`选课成功！已选择【${courseName}】`);
+        }
+
+        function dropCourse(btn, courseId, courseName) {
+            const confirmDrop = confirm(`确认退选课程【${courseName}】吗？`);
+            if (!confirmDrop) return;
+
+            selectedCourses = selectedCourses.filter(id => id !== courseId);
+            document.getElementById(`course-${courseId}`).remove();
+
+            const optionalCourseBtns = document.querySelectorAll('#optional-course-list .btn');
+            optionalCourseBtns.forEach(btnItem => {
+                if (btnItem.onclick && btnItem.onclick.toString().includes(courseId)) {
+                    btnItem.textContent = "选课";
+                    btnItem.classList.remove('btn-default');
+                    btnItem.classList.add('btn-primary');
+                    btnItem.disabled = false;
+                }
+            });
+
+            alert(`退课成功！已退选【${courseName}】`);
+        }
+
+        function searchCourse() {
+            const searchKey = document.getElementById('course-search').value.trim().toLowerCase();
+            const courseItems = document.querySelectorAll('#optional-course-list tr');
+            courseItems.forEach(tr => {
+                const courseName = tr.cells[1].textContent.toLowerCase();
+                const teacherName = tr.cells[2].textContent.toLowerCase();
+                tr.style.display = (courseName.includes(searchKey) || teacherName.includes(searchKey)) ? '' : 'none';
+            });
+        }
+
+        function resetSearch() {
+            document.getElementById('course-search').value = '';
+            document.querySelectorAll('#optional-course-list tr').forEach(tr => tr.style.display = '');
+        }
+
+        function queryCourse() {
+            const searchKey = document.getElementById('query-course-search').value.trim().toLowerCase();
+            const courseItems = document.querySelectorAll('#query-course-list tr');
+            courseItems.forEach(tr => {
+                const courseId = tr.cells[0].textContent.toLowerCase();
+                const courseName = tr.cells[1].textContent.toLowerCase();
+                tr.style.display = (courseId.includes(searchKey) || courseName.includes(searchKey)) ? '' : 'none';
+            });
+        }
+
+        function resetQuery() {
+            document.getElementById('query-course-search').value = '';
+            document.querySelectorAll('#query-course-list tr').forEach(tr => tr.style.display = '');
+        }
+
+        document.getElementById('info-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('student-name').value.trim();
+            const phone = document.getElementById('student-phone').value.trim();
+            const email = document.getElementById('student-email').value.trim();
+            const major = document.getElementById('student-major').value.trim();
+
+            if (!name || !phone || !email || !major) {
+                alert('请填写完整的个人信息！');
+                return;
+            }
+
+            document.getElementById('welcome-user').textContent = `欢迎您，${name}`;
+            alert('个人信息修改保存成功！');
+        });
+
+        document.getElementById('pwd-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const oldPwd = document.getElementById('old-pwd').value.trim();
+            const newPwd = document.getElementById('new-pwd').value.trim();
+            const confirmPwd = document.getElementById('confirm-pwd').value.trim();
+
+            if (!oldPwd || !newPwd || !confirmPwd) {
+                alert('请填写完整密码信息！');
+                return;
+            }
+            if (newPwd !== confirmPwd) {
+                alert('新密码与确认密码不一致！');
+                return;
+            }
+            if (newPwd.length < 6) {
+                alert('新密码长度不能少于6位！');
+                return;
+            }
+
+            alert('密码修改成功！请重新登录验证！');
+            this.reset();
+        });
+
+        function logout() {
+            const confirmLogout = confirm('确认退出登录吗？');
+            if (confirmLogout) {
+                alert('已成功退出登录！');
+            }
+        }
+    </script>
+</body>
+</html>
